@@ -6,6 +6,6 @@ import com.badlogic.gdx.Game;
 public class Core extends Game {
     @Override
     public void create() {
-        setScreen(new FirstScreen());
+        setScreen(new HomeScreen(this)); // Start with HomeScreen
     }
 }
