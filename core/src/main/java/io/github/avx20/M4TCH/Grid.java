@@ -51,7 +51,7 @@ public class Grid {
             for (int col = 0; col < GRID_SIZE; col++) {
                 int number = 1; // Start with base tile (1)
                 String color = getRandomColor(); // Random color
-                Texture texture = new Texture(color + "_tile.png"); // Load texture
+                Texture texture = new Texture(color + "_tile_one.png"); // Load texture
 
                 // Calculate tile position with centering offset
                 // Adjusted positioning for perfect grid alignment
