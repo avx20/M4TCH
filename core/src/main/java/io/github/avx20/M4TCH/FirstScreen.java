@@ -18,7 +18,14 @@ public class FirstScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
-        background = new Texture("subfolder/homescreen_bg.png"); // Ensure this exists in assets/
+
+        // Check if file exists before loading
+        if (!Gdx.files.internal("homescreen_bg.png").exists()) {
+            Gdx.app.error("File Error", "homescreen_bg.png not found in assets folder!");
+        }
+
+        // Load the texture (assuming it's directly in assets/)
+        background = new Texture("homescreen_bg.png");
     }
 
     @Override

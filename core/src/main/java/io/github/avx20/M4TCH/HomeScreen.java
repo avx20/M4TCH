@@ -34,7 +34,7 @@ public class HomeScreen implements Screen {
     @Override
     public void render(float delta) {
         // Handle fullscreen toggle
-        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.F)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F)) {
             if (Gdx.graphics.isFullscreen()) {
                 Gdx.graphics.setWindowedMode(1280, 720);
             } else {
@@ -77,7 +77,7 @@ public class HomeScreen implements Screen {
             float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY(); // Flip Y-axis
 
             if (playButtonBounds.contains(mouseX, mouseY)) {
-                game.setScreen(new FirstScreen(game)); // Switch to FirstScreen
+                game.setScreen(new LoadingScreen(game)); // Redirects to Loading Screen
                 dispose();
             }
         }
