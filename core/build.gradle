@@ -1,15 +1,8 @@
-[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
-eclipse.project.name = appName + '-core'
-
-dependencies {
-  api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
-  api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
-  api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
-  api "com.badlogicgames.gdx:gdx:$gdxVersion"
-
-  if(enableGraalNative == 'true') {
-    implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
-  }
+plugins {
+  id 'java-library'
 }
 
-sourceSets.main.resources.srcDirs += ["assets"]  // Ensure assets are included
+dependencies {
+  api 'com.badlogicgames.gdx:gdx:1.12.0' // LibGDX core library
+  implementation "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
+}
