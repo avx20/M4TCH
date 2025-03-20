@@ -44,8 +44,8 @@ public class PlayScreen implements Screen {
                 String color = getRandomColor(); // Random color for each tile
                 Texture texture = new Texture(color + "_tile_one.png");
                 Vector2 position = new Vector2(
-                        col * (TILE_SIZE + TILE_SPACING) + (viewport.getWorldWidth() - (4 * (TILE_SIZE + TILE_SPACING))) / 2,
-                        row * (TILE_SIZE + TILE_SPACING) + (viewport.getWorldHeight() - (4 * (TILE_SIZE + TILE_SPACING))) / 2
+                    col * (TILE_SIZE + TILE_SPACING) + (viewport.getWorldWidth() - (4 * (TILE_SIZE + TILE_SPACING))) / 2,
+                    row * (TILE_SIZE + TILE_SPACING) + (viewport.getWorldHeight() - (4 * (TILE_SIZE + TILE_SPACING))) / 2
                 );
                 grid[row][col] = new Tile(1, color, texture, position);
             }
@@ -78,7 +78,16 @@ public class PlayScreen implements Screen {
             for (int col = 0; col < 4; col++) {
                 Tile tile = grid[row][col];
                 if (tile != null) {
-                    batch.draw(tile.getTexture(), tile.getPosition().x, tile.getPosition().y, TILE_SIZE, TILE_SIZE);
+                    // Apply scaling effect
+                    float scale = tile.getScale();
+                    float scaledWidth = TILE_SIZE * scale;
+                    float scaledHeight = TILE_SIZE * scale;
+                    float offsetX = (TILE_SIZE - scaledWidth) / 2; // Center the scaled tile
+                    float offsetY = (TILE_SIZE - scaledHeight) / 2;
+
+                    batch.draw(tile.getTexture(),
+                        tile.getPosition().x + offsetX, tile.getPosition().y + offsetY,
+                        scaledWidth, scaledHeight);
                 }
             }
         }
@@ -108,6 +117,9 @@ public class PlayScreen implements Screen {
                 for (int col = 0; col < 4; col++) {
                     Tile tile = grid[row][col];
                     if (tile != null && tile.getBounds().contains(touchX, touchY)) {
+                        // Scale down the tile by 10% when clicked
+                        tile.setScale(0.9f);
+
                         if (firstSelectedTile == null) {
                             firstSelectedTile = tile;
                         } else if (secondSelectedTile == null && tile != firstSelectedTile) {
@@ -117,13 +129,23 @@ public class PlayScreen implements Screen {
                     }
                 }
             }
+        } else {
+            // Reset scale for all tiles when not clicked
+            for (int row = 0; row < 4; row++) {
+                for (int col = 0; col < 4; col++) {
+                    Tile tile = grid[row][col];
+                    if (tile != null && tile.getScale() != 1.0f) {
+                        tile.setScale(1.0f); // Reset scale to default
+                    }
+                }
+            }
         }
     }
 
     private void checkForMatch() {
         if (firstSelectedTile != null && secondSelectedTile != null) {
             if (firstSelectedTile.getNumber() == secondSelectedTile.getNumber() &&
-                    firstSelectedTile.getColor().equals(secondSelectedTile.getColor())) {
+                firstSelectedTile.getColor().equals(secondSelectedTile.getColor())) {
                 // Tiles match - combine them
                 combineTiles(firstSelectedTile, secondSelectedTile);
             } else {
@@ -145,7 +167,7 @@ public class PlayScreen implements Screen {
 
         // Reset the second tile (make it empty or invisible)
         tile2.setNumber(0);
-        tile2.setTexture(new Texture("empty_tile.png"));
+        tile2.setTexture(new Texture("tile_clicked_icon.png"));
 
         // Reset selection
         firstSelectedTile = null;

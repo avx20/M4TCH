@@ -10,6 +10,7 @@ public class Tile {
     private Texture texture;
     private Vector2 position;
     private Rectangle bounds;
+    private float scale = 1.0f; // Default scale
 
     public Tile(int number, String color, Texture texture, Vector2 position) {
         this.number = number;
@@ -24,7 +25,9 @@ public class Tile {
     public Texture getTexture() { return texture; }
     public Vector2 getPosition() { return position; }
     public Rectangle getBounds() { return bounds; }
+    public float getScale() { return scale; }
 
     public void setNumber(int number) { this.number = number; }
     public void setTexture(Texture texture) { this.texture = texture; }
+    public void setScale(float scale) { this.scale = scale; } // Set scale
 }
