@@ -51,7 +51,7 @@ public class HomeScreen implements Screen {
         // Settings and Leaderboard icons (smaller and perfect squares)
         float iconSize = 100; // Size for both settings and leaderboard icons
         settingsButtonBounds = new Rectangle(5, 975, iconSize, iconSize);
-        leaderboardButtonBounds = new Rectangle(5, 875, iconSize, iconSize);
+        leaderboardButtonBounds = new Rectangle(5, 860, iconSize, iconSize);
 
         // Exit button
         float exitButtonOriginalWidth = exitButtonTexture.getWidth();
@@ -112,10 +112,15 @@ public class HomeScreen implements Screen {
                 Timer.schedule(new Timer.Task() {
                     @Override
                     public void run() {
-                        isPlayButtonClicked = false;
-                        game.setScreen(new PlayScreen(game));
+                        isPlayButtonClicked = false; // Reset the button state
+                        Timer.schedule(new Timer.Task() {
+                            @Override
+                            public void run() {
+                                game.setScreen(new PlayScreen(game)); // Transition to PlayScreen
+                            }
+                        }, 0.1f); // Delay after the button returns to normal size
                     }
-                }, 0.1f); // Delay before performing the action
+                }, 0.1f); // Delay for the shrink animation
             } else if (settingsButtonBounds.contains(touchX, touchY)) {
                 isSettingsButtonClicked = true;
                 Timer.schedule(new Timer.Task() {
