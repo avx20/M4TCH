@@ -57,12 +57,14 @@ public class PlayScreen implements Screen {
         return colors[(int) (Math.random() * colors.length)];
     }
 
-    @Override
-    public void render(float delta) {
-        timeRemaining -= delta;
-        if (timeRemaining <= 0) {
-            game.setScreen(new HomeScreen(game));
-        }
+   @Override
+public void render(float delta) {
+    timeRemaining -= delta;
+    if (timeRemaining <= 0) {
+        game.setScreen(new GameOverScreen(game, score));
+        dispose();
+        return;
+    }
 
         viewport.apply();
         SpriteBatch batch = game.getBatch();
