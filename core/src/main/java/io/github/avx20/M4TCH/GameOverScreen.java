@@ -2,6 +2,7 @@ package io.github.avx20.M4TCH;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -15,92 +16,122 @@ public class GameOverScreen implements Screen {
     private Texture background;
     private Texture playAgainButtonTexture;
     private Texture mainMenuButtonTexture;
-    private Texture leaderboardButtonTexture;
     private Rectangle playAgainButtonBounds;
     private Rectangle mainMenuButtonBounds;
-    private Rectangle leaderboardButtonBounds;
     private Viewport viewport;
     private BitmapFont font;
-    
+
     // Final score and best score
     private final int finalScore;
-    private int bestScore = 5000; // Default value, normally would be loaded from storage
-    
+    private int bestScore = 0; // Can load high score from storage
+
     // Button click feedback
     private boolean isPlayAgainButtonClicked = false;
     private boolean isMainMenuButtonClicked = false;
-    private boolean isLeaderboardButtonClicked = false;
 
     public GameOverScreen(M4TCH game, int finalScore) {
         this.game = game;
         this.finalScore = finalScore;
+        // Update high score
+        if (finalScore > bestScore) {
+            bestScore = finalScore;
+            // Can save new high score here
+        }
+
         this.viewport = new FitViewport(1920, 1080);
         this.font = new BitmapFont();
-        font.getData().setScale(3.0f); // Scale up the font for better visibility
+        font.getData().setScale(3.0f); // Enlarge font for better display
 
-        // Load textures
-        this.background = new Texture("game_over_bg.png");
-        // Use the same button textures as in HomeScreen for consistency
-        this.playAgainButtonTexture = new Texture("play_button.png"); // Could be reused or have a dedicated texture
-        this.mainMenuButtonTexture = new Texture("exit_button.png"); // Using exit button texture for main menu
-        this.leaderboardButtonTexture = new Texture("leaderboard_icon.png");
+        try {
+            // Try to load game over background image, create solid color background if not exists
+            this.background = new Texture(Gdx.files.internal("game_over_bg.png"));
+        } catch (Exception e) {
+            Gdx.app.error("GameOverScreen", "Unable to load game over background image, using solid color background", e);
+            // If loading fails, background will remain null, we'll handle this in render
+        }
 
-        // Initialize button bounds
-        float playAgainButtonWidth = playAgainButtonTexture.getWidth();
-        float playAgainButtonHeight = playAgainButtonTexture.getHeight();
-        float centerX = (viewport.getWorldWidth() - playAgainButtonWidth) / 2;
+        try {
+            // Load button textures using known existing resources
+            this.playAgainButtonTexture = new Texture("play_button.png");
+            this.mainMenuButtonTexture = new Texture("exit_button.png");
+        } catch (Exception e) {
+            Gdx.app.error("GameOverScreen", "Unable to load button images", e);
+            // Similarly, if loading fails, we'll handle this in render
+        }
 
-        // Play Again button (centered, similar position to HomeScreen play button)
-        playAgainButtonBounds = new Rectangle(centerX, 400, playAgainButtonWidth, playAgainButtonHeight);
+        // Initialize button areas
+        float centerX = viewport.getWorldWidth() / 2;
 
-        // Main Menu button (below Play Again)
-        float mainMenuButtonWidth = mainMenuButtonTexture.getWidth() * 0.5f; // Scaling to make it appropriate size
-        float mainMenuButtonHeight = mainMenuButtonTexture.getHeight() * 0.5f;
-        mainMenuButtonBounds = new Rectangle(
-            (viewport.getWorldWidth() - mainMenuButtonWidth) / 2, 
-            280, 
-            mainMenuButtonWidth, 
-            mainMenuButtonHeight
-        );
+        // Play Again button (if texture is successfully loaded)
+        if (playAgainButtonTexture != null) {
+            float playButtonWidth = playAgainButtonTexture.getWidth();
+            float playButtonHeight = playAgainButtonTexture.getHeight();
+            playAgainButtonBounds = new Rectangle(
+                centerX - playButtonWidth / 2,
+                400,
+                playButtonWidth,
+                playButtonHeight
+            );
+        }
 
-        // Leaderboard button (smaller icon, positioned to the side)
-        float leaderboardIconSize = 100;
-        leaderboardButtonBounds = new Rectangle(
-            centerX + playAgainButtonWidth + 50, 
-            400, 
-            leaderboardIconSize, 
-            leaderboardIconSize
-        );
+        // Main Menu button (if texture is successfully loaded)
+        if (mainMenuButtonTexture != null) {
+            float menuButtonWidth = mainMenuButtonTexture.getWidth() * 0.5f; // Shrink button
+            float menuButtonHeight = mainMenuButtonTexture.getHeight() * 0.5f;
+            mainMenuButtonBounds = new Rectangle(
+                centerX - menuButtonWidth / 2,
+                280,
+                menuButtonWidth,
+                menuButtonHeight
+            );
+        }
     }
 
     @Override
     public void render(float delta) {
+        // Clear screen
+        Gdx.gl.glClearColor(0.1f, 0.1f, 0.3f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
         viewport.apply();
         SpriteBatch batch = game.getBatch();
         batch.setProjectionMatrix(viewport.getCamera().combined);
 
         batch.begin();
 
-        // Draw the background
-        batch.draw(background, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
+        // Draw background
+        if (background != null) {
+            batch.draw(background, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
+        }
 
-        // Draw Game Over text and scores
-        String gameOverText = "GAME OVER";
-        float gameOverX = (viewport.getWorldWidth() - font.getScaleX() * gameOverText.length() * 30) / 2;
-        font.draw(batch, gameOverText, gameOverX, 800);
-        
+        // Draw game over text and score
+        // If background image already contains "GAME OVER" text, this line can be omitted
+        if (background == null) { // Only draw text when there's no background image
+            font.draw(batch, "GAME OVER", viewport.getWorldWidth()/2 - 150, 800);
+        }
+
         String finalScoreText = "Your Score: " + finalScore;
-        float finalScoreX = (viewport.getWorldWidth() - font.getScaleX() * finalScoreText.length() * 20) / 2;
+        float finalScoreX = viewport.getWorldWidth()/2 - 200;
         font.draw(batch, finalScoreText, finalScoreX, 700);
-        
-        String bestScoreText = "Best Score: " + (finalScore > bestScore ? finalScore : bestScore);
-        float bestScoreX = (viewport.getWorldWidth() - font.getScaleX() * bestScoreText.length() * 20) / 2;
+
+        String bestScoreText = "Best Score: " + bestScore;
+        float bestScoreX = viewport.getWorldWidth()/2 - 200;
         font.draw(batch, bestScoreText, bestScoreX, 650);
 
-        // Draw buttons with click feedback
-        drawButtonWithFeedback(batch, playAgainButtonTexture, playAgainButtonBounds, isPlayAgainButtonClicked);
-        drawButtonWithFeedback(batch, mainMenuButtonTexture, mainMenuButtonBounds, isMainMenuButtonClicked);
-        drawButtonWithFeedback(batch, leaderboardButtonTexture, leaderboardButtonBounds, isLeaderboardButtonClicked);
+        // Draw buttons (with click feedback effect)
+        if (playAgainButtonTexture != null && playAgainButtonBounds != null) {
+            drawButtonWithFeedback(batch, playAgainButtonTexture, playAgainButtonBounds, isPlayAgainButtonClicked);
+        } else {
+            // Draw simple text button if button texture fails to load
+            font.draw(batch, "Play Again", viewport.getWorldWidth()/2 - 100, 400);
+        }
+
+        if (mainMenuButtonTexture != null && mainMenuButtonBounds != null) {
+            drawButtonWithFeedback(batch, mainMenuButtonTexture, mainMenuButtonBounds, isMainMenuButtonClicked);
+        } else {
+            // Draw simple text button if button texture fails to load
+            font.draw(batch, "Main Menu", viewport.getWorldWidth()/2 - 100, 280);
+        }
 
         batch.end();
 
@@ -115,14 +146,14 @@ public class GameOverScreen implements Screen {
         float y = bounds.y;
 
         if (isClicked) {
-            // Shrink the button by 20% when clicked (same as HomeScreen)
+            // Shrink button by 20% when clicked
             width *= 0.8f;
             height *= 0.8f;
-            x += (bounds.width - width) / 2; // Center the button horizontally
-            y += (bounds.height - height) / 2; // Center the button vertically
+            x += (bounds.width - width) / 2; // Center
+            y += (bounds.height - height) / 2;
         }
 
-        // Draw the button
+        // Draw button
         batch.draw(texture, x, y, width, height);
     }
 
@@ -131,21 +162,25 @@ public class GameOverScreen implements Screen {
             float touchX = Gdx.input.getX();
             float touchY = viewport.getWorldHeight() - Gdx.input.getY(); // Convert to world coordinates
 
-            if (playAgainButtonBounds.contains(touchX, touchY)) {
+            // Check if Play Again button is clicked
+            if (playAgainButtonBounds != null && playAgainButtonBounds.contains(touchX, touchY)) {
                 isPlayAgainButtonClicked = true;
                 Timer.schedule(new Timer.Task() {
                     @Override
                     public void run() {
-                        isPlayAgainButtonClicked = false; // Reset the button state
+                        isPlayAgainButtonClicked = false; // Reset button state
                         Timer.schedule(new Timer.Task() {
                             @Override
                             public void run() {
-                                game.setScreen(new PlayScreen(game)); // Start a new game
+                                game.setScreen(new PlayScreen(game)); // Start new game
+                                dispose();
                             }
-                        }, 0.1f); // Delay after the button returns to normal size
+                        }, 0.1f); // Delay after button returns to normal size
                     }
-                }, 0.1f); // Delay for the shrink animation
-            } else if (mainMenuButtonBounds.contains(touchX, touchY)) {
+                }, 0.1f); // Button shrink animation duration
+            }
+            // Check if Main Menu button is clicked
+            else if (mainMenuButtonBounds != null && mainMenuButtonBounds.contains(touchX, touchY)) {
                 isMainMenuButtonClicked = true;
                 Timer.schedule(new Timer.Task() {
                     @Override
@@ -155,24 +190,16 @@ public class GameOverScreen implements Screen {
                             @Override
                             public void run() {
                                 game.setScreen(new HomeScreen(game)); // Return to main menu
+                                dispose();
                             }
                         }, 0.1f);
                     }
                 }, 0.1f);
-            } else if (leaderboardButtonBounds.contains(touchX, touchY)) {
-                isLeaderboardButtonClicked = true;
-                Timer.schedule(new Timer.Task() {
-                    @Override
-                    public void run() {
-                        isLeaderboardButtonClicked = false;
-                        // If the LeaderboardScreen class exists, uncomment this:
-                        // game.setScreen(new LeaderboardScreen(game)); 
-                        
-                        // For now, since LeaderboardScreen might not be implemented yet,
-                        // we'll just log a message
-                        Gdx.app.log("GameOverScreen", "Leaderboard button clicked");
-                    }
-                }, 0.1f);
+            }
+            // If no button textures are loaded, any click returns to main menu
+            else if (playAgainButtonTexture == null || mainMenuButtonTexture == null) {
+                game.setScreen(new HomeScreen(game));
+                dispose();
             }
         }
     }
@@ -196,10 +223,15 @@ public class GameOverScreen implements Screen {
 
     @Override
     public void dispose() {
-        background.dispose();
-        playAgainButtonTexture.dispose();
-        mainMenuButtonTexture.dispose();
-        leaderboardButtonTexture.dispose();
         font.dispose();
+        if (background != null) {
+            background.dispose();
+        }
+        if (playAgainButtonTexture != null) {
+            playAgainButtonTexture.dispose();
+        }
+        if (mainMenuButtonTexture != null) {
+            mainMenuButtonTexture.dispose();
+        }
     }
 }
