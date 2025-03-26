@@ -2,11 +2,14 @@ package io.github.avx20.M4TCH;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Timer;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -14,75 +17,105 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 public class GameOverScreen implements Screen {
     private final M4TCH game;
     private Texture background;
-    private Texture playAgainButtonTexture;
-    private Texture mainMenuButtonTexture;
-    private Rectangle playAgainButtonBounds;
-    private Rectangle mainMenuButtonBounds;
+    private Texture restartButtonTexture;
+    private Texture exitButtonTexture;
+    private Rectangle restartButtonBounds;
+    private Rectangle exitButtonBounds;
     private Viewport viewport;
     private BitmapFont font;
-
+    
     // Final score and best score
     private final int finalScore;
-    private int bestScore = 0; // Can load high score from storage
-
+    private int bestScore = 0; // This could load from storage
+    
     // Button click feedback
-    private boolean isPlayAgainButtonClicked = false;
-    private boolean isMainMenuButtonClicked = false;
+    private boolean isRestartButtonClicked = false;
+    private boolean isExitButtonClicked = false;
+
+    // Debug variables
+    private boolean debugMode = false; // Set to true to see button boundaries
+    private Texture debugTexture;
+
+    // Visual settings for the buttons (actual rendered size)
+    private float restartVisualWidth;
+    private float restartVisualHeight;
+    private float exitVisualWidth;
+    private float exitVisualHeight;
+    private float restartVisualX;
+    private float restartVisualY;
+    private float exitVisualX;
+    private float exitVisualY;
 
     public GameOverScreen(M4TCH game, int finalScore) {
         this.game = game;
         this.finalScore = finalScore;
-        // Update high score
+        // Update best score if needed
         if (finalScore > bestScore) {
             bestScore = finalScore;
-            // Can save new high score here
+            // Could save the new high score here
         }
-
+        
         this.viewport = new FitViewport(1920, 1080);
         this.font = new BitmapFont();
-        font.getData().setScale(3.0f); // Enlarge font for better display
+        font.getData().setScale(3.0f); // Scale up font for better visibility
 
         try {
-            // Try to load game over background image, create solid color background if not exists
+            // Try to load the game over background image
             this.background = new Texture(Gdx.files.internal("game_over_bg.png"));
         } catch (Exception e) {
-            Gdx.app.error("GameOverScreen", "Unable to load game over background image, using solid color background", e);
-            // If loading fails, background will remain null, we'll handle this in render
+            Gdx.app.error("GameOverScreen", "Could not load game over background image", e);
+            // If loading fails, background will be null and we'll handle it in render
         }
 
         try {
-            // Load button textures using known existing resources
-            this.playAgainButtonTexture = new Texture("play_button.png");
-            this.mainMenuButtonTexture = new Texture("exit_button.png");
+            // Load button textures using your custom images
+            this.restartButtonTexture = new Texture("restart_button.png");
+            this.exitButtonTexture = new Texture("exit_button.png");
+            
+            // For debug mode
+            if (debugMode) {
+                // Create a 1x1 white pixel texture for debug purposes
+                Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+                pixmap.setColor(Color.WHITE);
+                pixmap.fill();
+                debugTexture = new Texture(pixmap);
+                pixmap.dispose();
+            }
         } catch (Exception e) {
-            Gdx.app.error("GameOverScreen", "Unable to load button images", e);
-            // Similarly, if loading fails, we'll handle this in render
+            Gdx.app.error("GameOverScreen", "Could not load button images", e);
         }
 
         // Initialize button areas
         float centerX = viewport.getWorldWidth() / 2;
-
-        // Play Again button (if texture is successfully loaded)
-        if (playAgainButtonTexture != null) {
-            float playButtonWidth = playAgainButtonTexture.getWidth();
-            float playButtonHeight = playAgainButtonTexture.getHeight();
-            playAgainButtonBounds = new Rectangle(
-                centerX - playButtonWidth / 2,
-                400,
-                playButtonWidth,
-                playButtonHeight
+        
+        // Calculate visual sizes for the buttons (for rendering)
+        if (restartButtonTexture != null) {
+            restartVisualWidth = restartButtonTexture.getWidth() * 0.4f; // Scale down to 40%
+            restartVisualHeight = restartButtonTexture.getHeight() * 0.4f;
+            restartVisualX = centerX - restartVisualWidth / 2;
+            restartVisualY = 300; // Keep original position
+            
+            // Create a smaller hit area for RESTART button
+            restartButtonBounds = new Rectangle(
+                restartVisualX + 20, // Add padding to make hit area smaller than visual
+                restartVisualY + 20,
+                restartVisualWidth - 40, // Reduce width by padding on both sides
+                restartVisualHeight - 40  // Reduce height by padding on both sides
             );
         }
-
-        // Main Menu button (if texture is successfully loaded)
-        if (mainMenuButtonTexture != null) {
-            float menuButtonWidth = mainMenuButtonTexture.getWidth() * 0.5f; // Shrink button
-            float menuButtonHeight = mainMenuButtonTexture.getHeight() * 0.5f;
-            mainMenuButtonBounds = new Rectangle(
-                centerX - menuButtonWidth / 2,
-                280,
-                menuButtonWidth,
-                menuButtonHeight
+        
+        if (exitButtonTexture != null) {
+            exitVisualWidth = exitButtonTexture.getWidth() * 0.4f;
+            exitVisualHeight = exitButtonTexture.getHeight() * 0.4f;
+            exitVisualX = centerX - exitVisualWidth / 2;
+            exitVisualY = 200; // Keep original position
+            
+            // Create hit area for EXIT button
+            exitButtonBounds = new Rectangle(
+                exitVisualX,
+                exitVisualY,
+                exitVisualWidth,
+                exitVisualHeight
             );
         }
     }
@@ -92,7 +125,7 @@ public class GameOverScreen implements Screen {
         // Clear screen
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.3f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
+        
         viewport.apply();
         SpriteBatch batch = game.getBatch();
         batch.setProjectionMatrix(viewport.getCamera().combined);
@@ -104,102 +137,124 @@ public class GameOverScreen implements Screen {
             batch.draw(background, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
         }
 
-        // Draw game over text and score
-        // If background image already contains "GAME OVER" text, this line can be omitted
-        if (background == null) { // Only draw text when there's no background image
+        // Draw game over text and scores if no background image
+        if (background == null) {
             font.draw(batch, "GAME OVER", viewport.getWorldWidth()/2 - 150, 800);
         }
-
+        
+        // Draw score info
         String finalScoreText = "Your Score: " + finalScore;
         float finalScoreX = viewport.getWorldWidth()/2 - 200;
         font.draw(batch, finalScoreText, finalScoreX, 700);
-
+        
         String bestScoreText = "Best Score: " + bestScore;
         float bestScoreX = viewport.getWorldWidth()/2 - 200;
         font.draw(batch, bestScoreText, bestScoreX, 650);
 
-        // Draw buttons (with click feedback effect)
-        if (playAgainButtonTexture != null && playAgainButtonBounds != null) {
-            drawButtonWithFeedback(batch, playAgainButtonTexture, playAgainButtonBounds, isPlayAgainButtonClicked);
-        } else {
-            // Draw simple text button if button texture fails to load
-            font.draw(batch, "Play Again", viewport.getWorldWidth()/2 - 100, 400);
-        }
+        // Draw buttons
+        if (restartButtonTexture != null) {
+            float width = restartVisualWidth;
+            float height = restartVisualHeight;
+            float x = restartVisualX;
+            float y = restartVisualY;
 
-        if (mainMenuButtonTexture != null && mainMenuButtonBounds != null) {
-            drawButtonWithFeedback(batch, mainMenuButtonTexture, mainMenuButtonBounds, isMainMenuButtonClicked);
-        } else {
-            // Draw simple text button if button texture fails to load
-            font.draw(batch, "Main Menu", viewport.getWorldWidth()/2 - 100, 280);
+            if (isRestartButtonClicked) {
+                // Shrink button by 20% when clicked
+                width *= 0.8f;
+                height *= 0.8f;
+                x += (restartVisualWidth - width) / 2;
+                y += (restartVisualHeight - height) / 2;
+            }
+            batch.draw(restartButtonTexture, x, y, width, height);
+            
+            // DEBUG: Draw RESTART button bounds
+            if (debugMode && debugTexture != null) {
+                batch.setColor(1, 0, 0, 0.5f); // Semi-transparent red
+                batch.draw(debugTexture, restartButtonBounds.x, restartButtonBounds.y, 
+                         restartButtonBounds.width, restartButtonBounds.height);
+            }
+        }
+        
+        if (exitButtonTexture != null) {
+            float width = exitVisualWidth;
+            float height = exitVisualHeight;
+            float x = exitVisualX;
+            float y = exitVisualY;
+
+            if (isExitButtonClicked) {
+                // Shrink button by 20% when clicked
+                width *= 0.8f;
+                height *= 0.8f;
+                x += (exitVisualWidth - width) / 2;
+                y += (exitVisualHeight - height) / 2;
+            }
+            batch.draw(exitButtonTexture, x, y, width, height);
+            
+            // DEBUG: Draw EXIT button bounds
+            if (debugMode && debugTexture != null) {
+                batch.setColor(0, 1, 0, 0.5f); // Semi-transparent green
+                batch.draw(debugTexture, exitButtonBounds.x, exitButtonBounds.y, 
+                         exitButtonBounds.width, exitButtonBounds.height);
+                batch.setColor(1, 1, 1, 1); // Reset color
+            }
         }
 
         batch.end();
 
-        // Handle button clicks
+        // Handle button input
         handleInput();
-    }
-
-    private void drawButtonWithFeedback(SpriteBatch batch, Texture texture, Rectangle bounds, boolean isClicked) {
-        float width = bounds.width;
-        float height = bounds.height;
-        float x = bounds.x;
-        float y = bounds.y;
-
-        if (isClicked) {
-            // Shrink button by 20% when clicked
-            width *= 0.8f;
-            height *= 0.8f;
-            x += (bounds.width - width) / 2; // Center
-            y += (bounds.height - height) / 2;
-        }
-
-        // Draw button
-        batch.draw(texture, x, y, width, height);
     }
 
     private void handleInput() {
         if (Gdx.input.justTouched()) {
-            float touchX = Gdx.input.getX();
-            float touchY = viewport.getWorldHeight() - Gdx.input.getY(); // Convert to world coordinates
+            // Get screen coordinates
+            float screenX = Gdx.input.getX();
+            float screenY = Gdx.input.getY();
+            
+            // Convert screen coordinates to world coordinates
+            Vector3 worldCoords = viewport.unproject(new Vector3(screenX, screenY, 0));
+            float worldX = worldCoords.x;
+            float worldY = worldCoords.y;
 
-            // Check if Play Again button is clicked
-            if (playAgainButtonBounds != null && playAgainButtonBounds.contains(touchX, touchY)) {
-                isPlayAgainButtonClicked = true;
-                Timer.schedule(new Timer.Task() {
-                    @Override
-                    public void run() {
-                        isPlayAgainButtonClicked = false; // Reset button state
-                        Timer.schedule(new Timer.Task() {
-                            @Override
-                            public void run() {
-                                game.setScreen(new PlayScreen(game)); // Start new game
-                                dispose();
-                            }
-                        }, 0.1f); // Delay after button returns to normal size
-                    }
-                }, 0.1f); // Button shrink animation duration
+            // Debug logging
+            if (debugMode) {
+                Gdx.app.log("GameOverScreen", "Touch at: " + worldX + ", " + worldY);
             }
-            // Check if Main Menu button is clicked
-            else if (mainMenuButtonBounds != null && mainMenuButtonBounds.contains(touchX, touchY)) {
-                isMainMenuButtonClicked = true;
+            
+            // Check for button clicks
+            // 1. First check if click is in the EXIT button area
+            if (exitButtonBounds != null && exitButtonBounds.contains(worldX, worldY)) {
+                isExitButtonClicked = true;
                 Timer.schedule(new Timer.Task() {
                     @Override
                     public void run() {
-                        isMainMenuButtonClicked = false;
+                        isExitButtonClicked = false;
                         Timer.schedule(new Timer.Task() {
                             @Override
                             public void run() {
-                                game.setScreen(new HomeScreen(game)); // Return to main menu
+                                game.setScreen(new HomeScreen(game));
                                 dispose();
                             }
                         }, 0.1f);
                     }
                 }, 0.1f);
             }
-            // If no button textures are loaded, any click returns to main menu
-            else if (playAgainButtonTexture == null || mainMenuButtonTexture == null) {
-                game.setScreen(new HomeScreen(game));
-                dispose();
+            // 2. Only check RESTART if we didn't hit EXIT
+            else if (restartButtonBounds != null && restartButtonBounds.contains(worldX, worldY)) {
+                isRestartButtonClicked = true;
+                Timer.schedule(new Timer.Task() {
+                    @Override
+                    public void run() {
+                        isRestartButtonClicked = false;
+                        Timer.schedule(new Timer.Task() {
+                            @Override
+                            public void run() {
+                                game.setScreen(new PlayScreen(game));
+                                dispose();
+                            }
+                        }, 0.1f);
+                    }
+                }, 0.1f);
             }
         }
     }
@@ -227,11 +282,14 @@ public class GameOverScreen implements Screen {
         if (background != null) {
             background.dispose();
         }
-        if (playAgainButtonTexture != null) {
-            playAgainButtonTexture.dispose();
+        if (restartButtonTexture != null) {
+            restartButtonTexture.dispose();
         }
-        if (mainMenuButtonTexture != null) {
-            mainMenuButtonTexture.dispose();
+        if (exitButtonTexture != null) {
+            exitButtonTexture.dispose();
+        }
+        if (debugMode && debugTexture != null) {
+            debugTexture.dispose();
         }
     }
 }
