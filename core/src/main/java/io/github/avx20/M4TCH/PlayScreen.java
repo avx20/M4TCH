@@ -21,12 +21,13 @@ public class PlayScreen implements Screen {
 
     // Grid and tiles
     private Tile[][] grid = new Tile[4][4];
-    private float TILE_SIZE = 200; // Size of each tile
-    private float TILE_SPACING = 10; // Space between tiles
+    private final float TILE_SIZE = 200;
+    private final float TILE_SPACING = 10;
 
     // Tile selection
     private Tile firstSelectedTile = null;
     private Tile secondSelectedTile = null;
+    private float animationTimer = 0;
 
     public PlayScreen(M4TCH game) {
         this.game = game;
@@ -34,20 +35,20 @@ public class PlayScreen implements Screen {
         this.gameBackground = new Texture("game_bg.png");
         this.font = new BitmapFont();
 
-        // Initialize the grid with tiles
         initializeGrid();
     }
 
     private void initializeGrid() {
-        for (int row = 0; row < 4; row++) {
-            for (int col = 0; col < 4; col++) {
-                String color = getRandomColor(); // Random color for each tile
+        for (int row = 3; row >= 0; row--) {  // Top to bottom
+            for (int col = 0; col < 4; col++) {  // Left to right
+                String color = getRandomColor();
                 Texture texture = new Texture(color + "_tile_one.png");
                 Vector2 position = new Vector2(
                     col * (TILE_SIZE + TILE_SPACING) + (viewport.getWorldWidth() - (4 * (TILE_SIZE + TILE_SPACING))) / 2,
                     row * (TILE_SIZE + TILE_SPACING) + (viewport.getWorldHeight() - (4 * (TILE_SIZE + TILE_SPACING))) / 2
                 );
-                grid[row][col] = new Tile(1, color, texture, position);
+
+                grid[row][col] = new Tile(1, color, texture, position, col, 3 - row);
             }
         }
     }
@@ -57,34 +58,33 @@ public class PlayScreen implements Screen {
         return colors[(int) (Math.random() * colors.length)];
     }
 
-   @Override
-public void render(float delta) {
-    timeRemaining -= delta;
-    if (timeRemaining <= 0) {
-        game.setScreen(new GameOverScreen(game, score));
-        dispose();
-        return;
-    }
+    @Override
+    public void render(float delta) {
+        timeRemaining -= delta;
+        animationTimer += delta;
+
+        if (timeRemaining <= 0) {
+            game.setScreen(new GameOverScreen(game, score));
+            dispose();
+            return;
+        }
 
         viewport.apply();
         SpriteBatch batch = game.getBatch();
         batch.setProjectionMatrix(viewport.getCamera().combined);
 
         batch.begin();
-
-        // Draw the background
         batch.draw(gameBackground, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
 
-        // Draw the grid
         for (int row = 0; row < 4; row++) {
             for (int col = 0; col < 4; col++) {
                 Tile tile = grid[row][col];
                 if (tile != null) {
-                    // Apply scaling effect
+                    tile.update(animationTimer);
                     float scale = tile.getScale();
                     float scaledWidth = TILE_SIZE * scale;
                     float scaledHeight = TILE_SIZE * scale;
-                    float offsetX = (TILE_SIZE - scaledWidth) / 2; // Center the scaled tile
+                    float offsetX = (TILE_SIZE - scaledWidth) / 2;
                     float offsetY = (TILE_SIZE - scaledHeight) / 2;
 
                     batch.draw(tile.getTexture(),
@@ -94,16 +94,12 @@ public void render(float delta) {
             }
         }
 
-        // Draw UI elements
         font.draw(batch, "Time: " + (int) timeRemaining, 50, viewport.getWorldHeight() - 50);
         font.draw(batch, "Score: " + score, 50, viewport.getWorldHeight() - 100);
-
         batch.end();
 
-        // Handle tile selection
         handleTileSelection();
 
-        // Handle ESC key to return to home screen
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             dispose();
             game.setScreen(new HomeScreen(game));
@@ -113,31 +109,25 @@ public void render(float delta) {
     private void handleTileSelection() {
         if (Gdx.input.justTouched()) {
             float touchX = Gdx.input.getX();
-            float touchY = viewport.getWorldHeight() - Gdx.input.getY(); // Convert to world coordinates
+            float touchY = viewport.getWorldHeight() - Gdx.input.getY();
 
-            for (int row = 0; row < 4; row++) {
+            // Check from top to bottom for accurate click detection
+            for (int row = 3; row >= 0; row--) {
                 for (int col = 0; col < 4; col++) {
                     Tile tile = grid[row][col];
-                    if (tile != null && tile.getBounds().contains(touchX, touchY)) {
-                        // Scale down the tile by 10% when clicked
-                        tile.setScale(0.9f);
+                    if (tile != null && tile.isFullyVisible()) {
+                        Rectangle bounds = tile.getBounds();
+                        if (bounds.contains(touchX, touchY)) {
+                            tile.setScale(0.9f); // Original click behavior
 
-                        if (firstSelectedTile == null) {
-                            firstSelectedTile = tile;
-                        } else if (secondSelectedTile == null && tile != firstSelectedTile) {
-                            secondSelectedTile = tile;
-                            checkForMatch();
+                            if (firstSelectedTile == null) {
+                                firstSelectedTile = tile;
+                            } else if (secondSelectedTile == null && tile != firstSelectedTile) {
+                                secondSelectedTile = tile;
+                                checkForMatch();
+                            }
+                            return; // Only process one tile per click
                         }
-                    }
-                }
-            }
-        } else {
-            // Reset scale for all tiles when not clicked
-            for (int row = 0; row < 4; row++) {
-                for (int col = 0; col < 4; col++) {
-                    Tile tile = grid[row][col];
-                    if (tile != null && tile.getScale() != 1.0f) {
-                        tile.setScale(1.0f); // Reset scale to default
                     }
                 }
             }
@@ -148,10 +138,8 @@ public void render(float delta) {
         if (firstSelectedTile != null && secondSelectedTile != null) {
             if (firstSelectedTile.getNumber() == secondSelectedTile.getNumber() &&
                 firstSelectedTile.getColor().equals(secondSelectedTile.getColor())) {
-                // Tiles match - combine them
                 combineTiles(firstSelectedTile, secondSelectedTile);
             } else {
-                // Tiles do not match - reset selection
                 firstSelectedTile = null;
                 secondSelectedTile = null;
             }
@@ -159,7 +147,6 @@ public void render(float delta) {
     }
 
     private void combineTiles(Tile tile1, Tile tile2) {
-        // Combine tiles into a higher-numbered tile
         int newNumber = tile1.getNumber() + 1;
         String color = tile1.getColor();
         Texture newTexture = new Texture(color + "_tile_" + newNumber + ".png");
@@ -167,25 +154,17 @@ public void render(float delta) {
         tile1.setNumber(newNumber);
         tile1.setTexture(newTexture);
 
-        // Reset the second tile (make it empty or invisible)
         tile2.setNumber(0);
         tile2.setTexture(new Texture("tile_clicked_icon.png"));
 
-        // Reset selection
         firstSelectedTile = null;
         secondSelectedTile = null;
-
-        // Update score
         score += calculateScore(newNumber, color);
     }
 
     private int calculateScore(int number, String color) {
-        // Implement scoring logic based on the requirements
-        if (number == 2) {
-            return 50;
-        } else if (number == 3) { // Star tile
-            return 500;
-        }
+        if (number == 2) return 50;
+        if (number == 3) return 500;
         return 0;
     }
 
