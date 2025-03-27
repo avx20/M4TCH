@@ -159,14 +159,14 @@ public class PlayScreen implements Screen {
             newTexture = new Texture(color + "_tile_" + newNumber + ".png"); // Normal progression
         }
 
-        // Create new tile at second clicked position
+        // Create new tile at second clicked position (normal speed)
         int secondRow = tile2.getGridY();
         int secondCol = tile2.getGridX();
         grid[secondRow][secondCol] = new Tile(newNumber, color, newTexture,
             tile2.getPosition(), secondCol, secondRow);
         grid[secondRow][secondCol].setAppearTime(animationTimer);
 
-        // Create new random tile at first clicked position
+        // Create new random tile at first clicked position (5x slower speed)
         int firstRow = tile1.getGridY();
         int firstCol = tile1.getGridX();
         String newColor = getRandomColor();
@@ -174,6 +174,7 @@ public class PlayScreen implements Screen {
         grid[firstRow][firstCol] = new Tile(1, newColor, firstTexture,
             tile1.getPosition(), firstCol, firstRow);
         grid[firstRow][firstCol].setAppearTime(animationTimer);
+        grid[firstRow][firstCol].setSpeedMultiplier(0.2f); // 5 times slower (1/5 speed)
 
         firstSelectedTile = null;
         secondSelectedTile = null;

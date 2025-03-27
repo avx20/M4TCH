@@ -13,6 +13,7 @@ public class Tile {
     private float scale = 0.0f;
     private float appearTime;
     private boolean fullyVisible = false;
+    private float speedMultiplier = 1.0f; // 1.0 = normal speed
     private final float TILE_SIZE = 200;
     private final int gridX;
     private final int gridY;
@@ -30,7 +31,8 @@ public class Tile {
 
     public void update(float elapsedTime) {
         if (elapsedTime >= appearTime && scale < 1.0f) {
-            scale = Math.min(1.0f, scale + 0.06f);
+            // Original speed was 0.06f per frame, now multiplied by speedMultiplier
+            scale = Math.min(1.0f, scale + 0.06f * speedMultiplier);
             if (scale >= 1.0f) {
                 fullyVisible = true;
             }
@@ -71,5 +73,8 @@ public class Tile {
         this.appearTime = time;
         this.scale = 0.0f;
         this.fullyVisible = false;
+    }
+    public void setSpeedMultiplier(float multiplier) {
+        this.speedMultiplier = multiplier;
     }
 }
