@@ -13,7 +13,9 @@ public class Tile {
     private float scale = 0.0f;
     private float appearTime;
     private boolean fullyVisible = false;
-    private final float TILE_SIZE = 200; // Match PlayScreen's TILE_SIZE
+    private final float TILE_SIZE = 200;
+    private final int gridX;
+    private final int gridY;
 
     public Tile(int number, String color, Texture texture, Vector2 position, int gridX, int gridY) {
         this.number = number;
@@ -21,14 +23,14 @@ public class Tile {
         this.texture = texture;
         this.position = position;
         this.bounds = new Rectangle(position.x, position.y, TILE_SIZE, TILE_SIZE);
-
-        // Changed to make top row (gridY=0) appear first, bottom row (gridY=3) last
-        this.appearTime = gridY * 0.4f; // Removed column offset to make whole rows appear together
+        this.gridX = gridX;
+        this.gridY = gridY;
+        this.appearTime = gridY * 0.4f + gridX * 0.1f;
     }
 
     public void update(float elapsedTime) {
         if (elapsedTime >= appearTime && scale < 1.0f) {
-            scale = Math.min(1.0f, scale + 0.06f); // Increased from 0.02f to 0.06f (3x faster)
+            scale = Math.min(1.0f, scale + 0.06f);
             if (scale >= 1.0f) {
                 fullyVisible = true;
             }
@@ -50,15 +52,24 @@ public class Tile {
         );
     }
 
-    // [Rest of the getters/setters remain exactly the same]
+    // Getters
     public boolean isFullyVisible() { return fullyVisible; }
     public float getScale() { return scale; }
     public Vector2 getPosition() { return position; }
     public Texture getTexture() { return texture; }
-    public void setTexture(Texture texture) { this.texture = texture; }
     public int getNumber() { return number; }
-    public void setNumber(int number) { this.number = number; }
     public String getColor() { return color; }
     public Rectangle getBounds() { return bounds; }
+    public int getGridX() { return gridX; }
+    public int getGridY() { return gridY; }
+
+    // Setters
+    public void setTexture(Texture texture) { this.texture = texture; }
+    public void setNumber(int number) { this.number = number; }
     public void setScale(float scale) { this.scale = scale; }
+    public void setAppearTime(float time) {
+        this.appearTime = time;
+        this.scale = 0.0f;
+        this.fullyVisible = false;
+    }
 }

@@ -39,7 +39,7 @@ public class PlayScreen implements Screen {
     }
 
     private void initializeGrid() {
-        for (int row = 3; row >= 0; row--) {  // Top to bottom
+        for (int row = 0; row < 4; row++) {  // Changed to top to bottom
             for (int col = 0; col < 4; col++) {  // Left to right
                 String color = getRandomColor();
                 Texture texture = new Texture(color + "_tile_one.png");
@@ -48,7 +48,7 @@ public class PlayScreen implements Screen {
                     row * (TILE_SIZE + TILE_SPACING) + (viewport.getWorldHeight() - (4 * (TILE_SIZE + TILE_SPACING))) / 2
                 );
 
-                grid[row][col] = new Tile(1, color, texture, position, col, 3 - row);
+                grid[row][col] = new Tile(1, color, texture, position, col, row);
             }
         }
     }
@@ -149,13 +149,31 @@ public class PlayScreen implements Screen {
     private void combineTiles(Tile tile1, Tile tile2) {
         int newNumber = tile1.getNumber() + 1;
         String color = tile1.getColor();
-        Texture newTexture = new Texture(color + "_tile_" + newNumber + ".png");
+        Texture newTexture;
 
-        tile1.setNumber(newNumber);
-        tile1.setTexture(newTexture);
+        // Special case: when matching two "2" tiles
+        if (tile1.getNumber() == 2 && tile2.getNumber() == 2) {
+            newNumber = 3; // Star tile will be considered level 3
+            newTexture = new Texture(color + "_tile_star.png"); // Use star texture
+        } else {
+            newTexture = new Texture(color + "_tile_" + newNumber + ".png"); // Normal progression
+        }
 
-        tile2.setNumber(0);
-        tile2.setTexture(new Texture("tile_clicked_icon.png"));
+        // Create new tile at second clicked position
+        int secondRow = tile2.getGridY();
+        int secondCol = tile2.getGridX();
+        grid[secondRow][secondCol] = new Tile(newNumber, color, newTexture,
+            tile2.getPosition(), secondCol, secondRow);
+        grid[secondRow][secondCol].setAppearTime(animationTimer);
+
+        // Create new random tile at first clicked position
+        int firstRow = tile1.getGridY();
+        int firstCol = tile1.getGridX();
+        String newColor = getRandomColor();
+        Texture firstTexture = new Texture(newColor + "_tile_one.png");
+        grid[firstRow][firstCol] = new Tile(1, newColor, firstTexture,
+            tile1.getPosition(), firstCol, firstRow);
+        grid[firstRow][firstCol].setAppearTime(animationTimer);
 
         firstSelectedTile = null;
         secondSelectedTile = null;
