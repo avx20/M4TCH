@@ -17,7 +17,7 @@ import java.io.File;
 public class LoadingScreen implements Screen {
     private M4TCH game;
     private SpriteBatch batch;
-    
+
     // Loading screen assets
     private Texture backgroundTexture;
     private Texture loadingFrameTexture;
@@ -25,9 +25,9 @@ public class LoadingScreen implements Screen {
     private BitmapFont loadingFont;
     private Skin uiSkin;
     private GlyphLayout glyphLayout;
-    
+
     private Viewport viewport;
-    
+
     private float progress = 0f;
     private float loadingTime = 0f;
     private static final float LOADING_DURATION = 2f; // Reduced loading time for better UX
@@ -46,23 +46,29 @@ public class LoadingScreen implements Screen {
     public LoadingScreen(M4TCH game, Screen nextScreen) {
         this.game = game;
         this.nextScreen = nextScreen;
-        
+
         // Create a viewport to handle different screen sizes
         this.viewport = new FitViewport(1920, 1080);
-        
+
         // Initialize resources
         batch = new SpriteBatch();
         glyphLayout = new GlyphLayout(); // Initialize GlyphLayout
-        
+
         try {
             // Determine the correct path to assets
             String assetsPath = determineAssetsPath();
-            
+
             // Try loading assets with flexible paths
-            backgroundTexture = loadTextureWithFallbacks("loading_background.png", assetsPath);
+            backgroundTexture = loadTextureWithFallbacks("game_bg.png", assetsPath);
+            if (backgroundTexture != null) {
+                Gdx.app.log("LoadingScreen", "Successfully loaded background texture");
+            } else {
+                Gdx.app.error("LoadingScreen", "Failed to load background texture");
+            }
+
             loadingFrameTexture = loadTextureWithFallbacks("loading_frame.png", assetsPath);
             loadingBarTexture = loadTextureWithFallbacks("loading_bar.png", assetsPath);
-            
+
             // Load UI Skin with flexible paths
             try {
                 uiSkin = new Skin(Gdx.files.absolute(assetsPath + File.separator + "uiskin.atlas"));
@@ -71,12 +77,12 @@ public class LoadingScreen implements Screen {
             } catch (Exception e) {
                 Gdx.app.error("LoadingScreen", "Error loading skin: " + e.getMessage());
             }
-            
+
             if (loadingFont == null) {
                 // Fallback to default libGDX font if skin font is not available
                 loadingFont = new BitmapFont();
             }
-            
+
             // Adjust font size and color
             loadingFont.getData().setScale(2f); // Increased font size
             loadingFont.setColor(1f, 1f, 1f, 1f); // Bright white color
@@ -92,18 +98,42 @@ public class LoadingScreen implements Screen {
         String[] pathPrefixes = {
             "", // No prefix (direct path)
             basePath + File.separator,
+            basePath + File.separator + "images" + File.separator,
+            basePath + File.separator + "textures" + File.separator,
+            basePath + File.separator + "backgrounds" + File.separator,
             "core/assets/",
-            "../core/assets/"
+            "../core/assets/",
+            "core/assets/images/",
+            "core/assets/textures/",
+            "core/assets/backgrounds/",
+            "assets/",
+            "assets/images/",
+            "assets/textures/",
+            "assets/backgrounds/"
         };
-        
+
         for (String prefix : pathPrefixes) {
             try {
-                return new Texture(prefix + filename);
+                String path = prefix + filename;
+                Gdx.app.log("LoadingScreen", "Trying to load texture from: " + path);
+
+                // Try internal files first
+                if (Gdx.files.internal(path).exists()) {
+                    Gdx.app.log("LoadingScreen", "Found texture at: " + path);
+                    return new Texture(Gdx.files.internal(path));
+                }
+
+                // Try absolute path as fallback
+                if (Gdx.files.absolute(path).exists()) {
+                    Gdx.app.log("LoadingScreen", "Found texture at absolute path: " + path);
+                    return new Texture(Gdx.files.absolute(path));
+                }
             } catch (Exception e) {
                 // Try next path
+                Gdx.app.log("LoadingScreen", "Failed to load from " + prefix + filename + ": " + e.getMessage());
             }
         }
-        
+
         Gdx.app.error("LoadingScreen", "Could not load texture: " + filename);
         return null;
     }
@@ -123,6 +153,7 @@ public class LoadingScreen implements Screen {
         for (String path : possiblePaths) {
             File assetsDir = new File(path);
             if (assetsDir.exists() && assetsDir.isDirectory()) {
+                Gdx.app.log("LoadingScreen", "Found assets directory at: " + assetsDir.getAbsolutePath());
                 return assetsDir.getAbsolutePath();
             }
         }
@@ -134,37 +165,39 @@ public class LoadingScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        // Clear the screen with a more vivid background
-        Gdx.gl.glClearColor(0.1f, 0.1f, 0.2f, 1);
+        // Clear the screen with a transparent background
+        // This is still needed to clear previous frame but won't affect our background texture
+        Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        
+
         // Update loading progress and time
         loadingTime += delta;
         progress = Math.min(loadingTime / LOADING_DURATION, 1f);
-        
+
         // Update loading stage
         currentStage = (int)(progress * loadingStages.length);
         currentStage = Math.min(currentStage, loadingStages.length - 1);
-        
+
         // Apply viewport
         viewport.apply();
-        
+
         batch.setProjectionMatrix(viewport.getCamera().combined);
         batch.begin();
-        
+
         // Draw background
         if (backgroundTexture != null) {
+            // Draw the background texture to fill the entire screen
             batch.draw(backgroundTexture, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
         }
-        
+
         // Draw loading frame and progress bar
         drawLoadingBar();
-        
+
         // Draw loading stage text
         drawLoadingStage();
-        
+
         batch.end();
-        
+
         // Switch to next screen when loading is complete
         if (progress >= 1) {
             game.setScreen(nextScreen);
@@ -188,31 +221,31 @@ public class LoadingScreen implements Screen {
         // Draw semi-transparent background frame
         batch.setColor(1f, 1f, 1f, 0.3f);
         if (loadingFrameTexture != null) {
-            batch.draw(loadingFrameTexture, 
-                centerX - barWidth / 2f, 
-                centerY - barHeight / 2f, 
-                barWidth, 
+            batch.draw(loadingFrameTexture,
+                centerX - barWidth / 2f,
+                centerY - barHeight / 2f,
+                barWidth,
                 barHeight
             );
         } else {
             // Fallback if frame texture is missing
             batch.draw(loadingBarTexture,
-                centerX - barWidth / 2f, 
-                centerY - barHeight / 2f, 
-                barWidth, 
+                centerX - barWidth / 2f,
+                centerY - barHeight / 2f,
+                barWidth,
                 barHeight
             );
         }
 
         // Restore full opacity
         batch.setColor(1f, 1f, 1f, 1f);
-        
+
         // Draw progress bar with bright color
         batch.setColor(0.2f, 0.7f, 1f, 1f); // Bright blue
-        batch.draw(loadingBarTexture, 
-            centerX - barWidth / 2f, 
-            centerY - barHeight / 2f, 
-            barWidth * interpolatedProgress, 
+        batch.draw(loadingBarTexture,
+            centerX - barWidth / 2f,
+            centerY - barHeight / 2f,
+            barWidth * interpolatedProgress,
             barHeight
         );
 
@@ -228,23 +261,23 @@ public class LoadingScreen implements Screen {
 
         // Draw current loading stage text
         String currentStageText = loadingStages[currentStage];
-        
+
         // Use GlyphLayout to calculate text width
         glyphLayout.setText(loadingFont, currentStageText);
-        
+
         // Center-align text, slightly raised position
-        loadingFont.draw(batch, 
-            currentStageText, 
-            centerX - glyphLayout.width / 2f, 
+        loadingFont.draw(batch,
+            currentStageText,
+            centerX - glyphLayout.width / 2f,
             centerY + 100f
         );
 
         // Draw percentage
         String percentageText = String.format("%d%%", (int)(progress * 100));
         glyphLayout.setText(loadingFont, percentageText);
-        loadingFont.draw(batch, 
-            percentageText, 
-            centerX - glyphLayout.width / 2f, 
+        loadingFont.draw(batch,
+            percentageText,
+            centerX - glyphLayout.width / 2f,
             centerY + 50f
         );
     }
@@ -257,7 +290,7 @@ public class LoadingScreen implements Screen {
     @Override
     public void dispose() {
         batch.dispose();
-        
+
         // Safely dispose of textures and font
         if (backgroundTexture != null) backgroundTexture.dispose();
         if (loadingFrameTexture != null) loadingFrameTexture.dispose();

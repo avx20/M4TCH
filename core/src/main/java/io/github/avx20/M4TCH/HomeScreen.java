@@ -144,8 +144,8 @@ public class HomeScreen implements Screen {
                     @Override
                     public void run() {
                         isLeaderboardButtonClicked = false;
-                        // Use Loading Screen to transition to LeaderboardScreen
-                        game.setScreen(new LoadingScreen(game, new LeaderboardScreen(game)));
+                        // Direct transition to LeaderboardScreen without LoadingScreen
+                        game.setScreen(new LeaderboardScreen(game));
                     }
                 }, 0.1f);
             } else if (exitButtonBounds.contains(worldX, worldY)) {
