@@ -29,6 +29,11 @@ public class PlayScreen implements Screen {
     private Tile secondSelectedTile = null;
     private float animationTimer = 0;
 
+    // Input blocking for wrong matches
+    private boolean inputBlocked = false;
+    private float inputBlockTimer = 0;
+    private Tile[] vibratingTiles = new Tile[2];
+
     public PlayScreen(M4TCH game) {
         this.game = game;
         this.viewport = new FitViewport(1920, 1080);
@@ -39,8 +44,8 @@ public class PlayScreen implements Screen {
     }
 
     private void initializeGrid() {
-        for (int row = 0; row < 4; row++) {  // Changed to top to bottom
-            for (int col = 0; col < 4; col++) {  // Left to right
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
                 String color = getRandomColor();
                 Texture texture = new Texture(color + "_tile_one.png");
                 Vector2 position = new Vector2(
@@ -69,6 +74,19 @@ public class PlayScreen implements Screen {
             return;
         }
 
+        // Handle input blocking for wrong matches
+        if (inputBlocked) {
+            inputBlockTimer += delta;
+            if (inputBlockTimer >= 0.5f) {
+                inputBlocked = false;
+                inputBlockTimer = 0;
+                if (vibratingTiles[0] != null) vibratingTiles[0].setVibrating(false);
+                if (vibratingTiles[1] != null) vibratingTiles[1].setVibrating(false);
+                vibratingTiles[0] = null;
+                vibratingTiles[1] = null;
+            }
+        }
+
         viewport.apply();
         SpriteBatch batch = game.getBatch();
         batch.setProjectionMatrix(viewport.getCamera().combined);
@@ -87,8 +105,18 @@ public class PlayScreen implements Screen {
                     float offsetX = (TILE_SIZE - scaledWidth) / 2;
                     float offsetY = (TILE_SIZE - scaledHeight) / 2;
 
+                    // Apply vibration effect if needed
+                    float vibrationOffsetX = 0;
+                    float vibrationOffsetY = 0;
+                    if (tile.isVibrating()) {
+                        float vibrationAmount = (float) Math.sin(animationTimer * 30) * 5;
+                        vibrationOffsetX = vibrationAmount;
+                        vibrationOffsetY = vibrationAmount;
+                    }
+
                     batch.draw(tile.getTexture(),
-                        tile.getPosition().x + offsetX, tile.getPosition().y + offsetY,
+                        tile.getPosition().x + offsetX + vibrationOffsetX,
+                        tile.getPosition().y + offsetY + vibrationOffsetY,
                         scaledWidth, scaledHeight);
                 }
             }
@@ -98,7 +126,9 @@ public class PlayScreen implements Screen {
         font.draw(batch, "Score: " + score, 50, viewport.getWorldHeight() - 100);
         batch.end();
 
-        handleTileSelection();
+        if (!inputBlocked) {
+            handleTileSelection();
+        }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             dispose();
@@ -111,14 +141,13 @@ public class PlayScreen implements Screen {
             float touchX = Gdx.input.getX();
             float touchY = viewport.getWorldHeight() - Gdx.input.getY();
 
-            // Check from top to bottom for accurate click detection
             for (int row = 3; row >= 0; row--) {
                 for (int col = 0; col < 4; col++) {
                     Tile tile = grid[row][col];
                     if (tile != null && tile.isFullyVisible()) {
                         Rectangle bounds = tile.getBounds();
                         if (bounds.contains(touchX, touchY)) {
-                            tile.setScale(0.9f); // Original click behavior
+                            tile.setScale(0.9f);
 
                             if (firstSelectedTile == null) {
                                 firstSelectedTile = tile;
@@ -126,7 +155,7 @@ public class PlayScreen implements Screen {
                                 secondSelectedTile = tile;
                                 checkForMatch();
                             }
-                            return; // Only process one tile per click
+                            return;
                         }
                     }
                 }
@@ -138,12 +167,50 @@ public class PlayScreen implements Screen {
         if (firstSelectedTile != null && secondSelectedTile != null) {
             if (firstSelectedTile.getNumber() == secondSelectedTile.getNumber() &&
                 firstSelectedTile.getColor().equals(secondSelectedTile.getColor())) {
-                combineTiles(firstSelectedTile, secondSelectedTile);
+
+                // Special case for star tiles (number 3)
+                if (firstSelectedTile.getNumber() == 3) {
+                    handleStarTileMatch(firstSelectedTile, secondSelectedTile);
+                } else {
+                    combineTiles(firstSelectedTile, secondSelectedTile);
+                }
             } else {
+                // Wrong match - vibrate tiles and block input
+                firstSelectedTile.setVibrating(true);
+                secondSelectedTile.setVibrating(true);
+                vibratingTiles[0] = firstSelectedTile;
+                vibratingTiles[1] = secondSelectedTile;
+                inputBlocked = true;
+                inputBlockTimer = 0;
+
                 firstSelectedTile = null;
                 secondSelectedTile = null;
             }
         }
+    }
+
+    private void handleStarTileMatch(Tile tile1, Tile tile2) {
+        // For star tiles, just reset both to level 1 tiles
+        int row1 = tile1.getGridY();
+        int col1 = tile1.getGridX();
+        int row2 = tile2.getGridY();
+        int col2 = tile2.getGridX();
+
+        String color1 = getRandomColor();
+        String color2 = getRandomColor();
+
+        // Create new random tiles at both positions
+        grid[row1][col1] = new Tile(1, color1, new Texture(color1 + "_tile_one.png"),
+            tile1.getPosition(), col1, row1);
+        grid[row1][col1].setAppearTime(animationTimer);
+
+        grid[row2][col2] = new Tile(1, color2, new Texture(color2 + "_tile_one.png"),
+            tile2.getPosition(), col2, row2);
+        grid[row2][col2].setAppearTime(animationTimer);
+
+        firstSelectedTile = null;
+        secondSelectedTile = null;
+        score += calculateScore(3, tile1.getColor());
     }
 
     private void combineTiles(Tile tile1, Tile tile2) {
@@ -151,15 +218,14 @@ public class PlayScreen implements Screen {
         String color = tile1.getColor();
         Texture newTexture;
 
-        // Special case: when matching two "2" tiles
         if (tile1.getNumber() == 2 && tile2.getNumber() == 2) {
             newNumber = 3; // Star tile will be considered level 3
-            newTexture = new Texture(color + "_tile_star.png"); // Use star texture
+            newTexture = new Texture(color + "_tile_star.png");
         } else {
-            newTexture = new Texture(color + "_tile_" + newNumber + ".png"); // Normal progression
+            newTexture = new Texture(color + "_tile_" + newNumber + ".png");
         }
 
-        // Create new tile at second clicked position (normal speed)
+        // Create new tile at second clicked position
         int secondRow = tile2.getGridY();
         int secondCol = tile2.getGridX();
         grid[secondRow][secondCol] = new Tile(newNumber, color, newTexture,
@@ -174,7 +240,7 @@ public class PlayScreen implements Screen {
         grid[firstRow][firstCol] = new Tile(1, newColor, firstTexture,
             tile1.getPosition(), firstCol, firstRow);
         grid[firstRow][firstCol].setAppearTime(animationTimer);
-        grid[firstRow][firstCol].setSpeedMultiplier(0.2f); // 5 times slower (1/5 speed)
+        grid[firstRow][firstCol].setSpeedMultiplier(0.2f);
 
         firstSelectedTile = null;
         secondSelectedTile = null;
