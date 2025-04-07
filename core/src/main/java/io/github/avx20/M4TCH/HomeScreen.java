@@ -2,10 +2,10 @@ package io.github.avx20.M4TCH;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Timer;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -57,7 +57,7 @@ public class HomeScreen implements Screen {
         float exitButtonOriginalWidth = exitButtonTexture.getWidth();
         float exitButtonOriginalHeight = exitButtonTexture.getHeight();
         float exitButtonNewWidth = exitButtonOriginalWidth * 0.3f; // Reduce width by 70%
-        float exitButtonNewHeight = exitButtonOriginalHeight * 0.25f; // Reduce height by 70%
+        float exitButtonNewHeight = exitButtonOriginalHeight * 0.25f; // Reduce height by 75%
         exitButtonBounds = new Rectangle(1750, -18, exitButtonNewWidth, exitButtonNewHeight);
     }
 
@@ -104,10 +104,16 @@ public class HomeScreen implements Screen {
 
     private void handleInput() {
         if (Gdx.input.justTouched()) {
-            float touchX = Gdx.input.getX();
-            float touchY = viewport.getWorldHeight() - Gdx.input.getY(); // Convert to world coordinates
+            // Get screen coordinates
+            float screenX = Gdx.input.getX();
+            float screenY = Gdx.input.getY();
 
-            if (playButtonBounds.contains(touchX, touchY)) {
+            // Convert screen coordinates to world coordinates using viewport for proper input handling
+            Vector3 worldCoords = viewport.unproject(new Vector3(screenX, screenY, 0));
+            float worldX = worldCoords.x;
+            float worldY = worldCoords.y;
+
+            if (playButtonBounds.contains(worldX, worldY)) {
                 isPlayButtonClicked = true;
                 Timer.schedule(new Timer.Task() {
                     @Override
@@ -116,30 +122,33 @@ public class HomeScreen implements Screen {
                         Timer.schedule(new Timer.Task() {
                             @Override
                             public void run() {
-                                game.setScreen(new PlayScreen(game)); // Transition to PlayScreen
+                                // Use Loading Screen to transition to PlayScreen for smoother experience
+                                game.setScreen(new LoadingScreen(game, new PlayScreen(game)));
                             }
                         }, 0.1f); // Delay after the button returns to normal size
                     }
                 }, 0.1f); // Delay for the shrink animation
-            } else if (settingsButtonBounds.contains(touchX, touchY)) {
+            } else if (settingsButtonBounds.contains(worldX, worldY)) {
                 isSettingsButtonClicked = true;
                 Timer.schedule(new Timer.Task() {
                     @Override
                     public void run() {
                         isSettingsButtonClicked = false;
+                        // Will be implemented when SettingsScreen is available
                         // game.setScreen(new SettingsScreen(game));
                     }
                 }, 0.1f);
-            } else if (leaderboardButtonBounds.contains(touchX, touchY)) {
+            } else if (leaderboardButtonBounds.contains(worldX, worldY)) {
                 isLeaderboardButtonClicked = true;
                 Timer.schedule(new Timer.Task() {
                     @Override
                     public void run() {
                         isLeaderboardButtonClicked = false;
-                        // game.setScreen(new LeaderboardScreen(game));
+                        // Use Loading Screen to transition to LeaderboardScreen
+                        game.setScreen(new LoadingScreen(game, new LeaderboardScreen(game)));
                     }
                 }, 0.1f);
-            } else if (exitButtonBounds.contains(touchX, touchY)) {
+            } else if (exitButtonBounds.contains(worldX, worldY)) {
                 isExitButtonClicked = true;
                 Timer.schedule(new Timer.Task() {
                     @Override
