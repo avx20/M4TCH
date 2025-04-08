@@ -23,11 +23,27 @@ public class Tile {
         this.number = number;
         this.color = color;
         this.texture = texture;
-        this.position = position;
+        this.position = new Vector2(position);
         this.bounds = new Rectangle(position.x, position.y, TILE_SIZE, TILE_SIZE);
         this.gridX = gridX;
         this.gridY = gridY;
         this.appearTime = gridY * 0.4f + gridX * 0.1f;
+    }
+
+    // Copy Constructor
+    public Tile(Tile other) {
+        this.number = other.number;
+        this.color = other.color;
+        this.texture = new Texture(other.texture.getTextureData()); // Create a new Texture instance
+        this.position = new Vector2(other.position);
+        this.bounds = new Rectangle(other.bounds);
+        this.scale = other.scale;
+        this.appearTime = other.appearTime;
+        this.fullyVisible = other.fullyVisible;
+        this.vibrating = other.vibrating;
+        this.speedMultiplier = other.speedMultiplier;
+        this.gridX = other.gridX;
+        this.gridY = other.gridY;
     }
 
     public void update(float elapsedTime) {
@@ -47,37 +63,78 @@ public class Tile {
         float offsetY = (TILE_SIZE - scaledHeight) / 2;
 
         bounds.set(
-            position.x + offsetX,
-            position.y + offsetY,
-            scaledWidth,
-            scaledHeight
+                position.x + offsetX,
+                position.y + offsetY,
+                scaledWidth,
+                scaledHeight
         );
     }
 
     // Getters
-    public boolean isFullyVisible() { return fullyVisible; }
-    public float getScale() { return scale; }
-    public Vector2 getPosition() { return position; }
-    public Texture getTexture() { return texture; }
-    public int getNumber() { return number; }
-    public String getColor() { return color; }
-    public Rectangle getBounds() { return bounds; }
-    public int getGridX() { return gridX; }
-    public int getGridY() { return gridY; }
-    public boolean isVibrating() { return vibrating; }
+    public boolean isFullyVisible() {
+        return fullyVisible;
+    }
+
+    public float getScale() {
+        return scale;
+    }
+
+    public Vector2 getPosition() {
+        return new Vector2(position); // Return a copy
+    }
+
+    public Texture getTexture() {
+        return texture;
+    }
+
+    public int getNumber() {
+        return number;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public Rectangle getBounds() {
+        return new Rectangle(bounds); // Return a copy
+    }
+
+    public int getGridX() {
+        return gridX;
+    }
+
+    public int getGridY() {
+        return gridY;
+    }
+
+    public boolean isVibrating() {
+        return vibrating;
+    }
+
 
     // Setters
-    public void setTexture(Texture texture) { this.texture = texture; }
-    public void setNumber(int number) { this.number = number; }
-    public void setScale(float scale) { this.scale = scale; }
+    public void setTexture(Texture texture) {
+        this.texture = texture;
+    }
+
+    public void setNumber(int number) {
+        this.number = number;
+    }
+
+    public void setScale(float scale) {
+        this.scale = scale;
+    }
+
     public void setAppearTime(float time) {
         this.appearTime = time;
         this.scale = 0.0f;
         this.fullyVisible = false;
     }
+
     public void setSpeedMultiplier(float multiplier) {
         this.speedMultiplier = multiplier;
     }
+
     public void setVibrating(boolean vibrating) {
         this.vibrating = vibrating;
     }

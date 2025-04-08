@@ -19,27 +19,28 @@ public class PlayScreen implements Screen {
     private float timeRemaining = 60;
     private int score = 0;
 
-    // Grid and tiles
     private Tile[][] grid = new Tile[4][4];
     private final float TILE_SIZE = 200;
     private final float TILE_SPACING = 10;
 
-    // Tile selection
     private Tile firstSelectedTile = null;
     private Tile secondSelectedTile = null;
     private float animationTimer = 0;
 
-    // Input blocking for wrong matches
     private boolean inputBlocked = false;
     private float inputBlockTimer = 0;
     private Tile[] vibratingTiles = new Tile[2];
+    
+    private boolean isPaused = false;
+    private float pausedTimeRemaining;
+    private int pausedScore;
+    private Tile[][] pausedGrid = new Tile[4][4];
 
     public PlayScreen(M4TCH game) {
         this.game = game;
         this.viewport = new FitViewport(1920, 1080);
         this.gameBackground = new Texture("game_bg.png");
         this.font = new BitmapFont();
-
         initializeGrid();
     }
 
@@ -65,6 +66,8 @@ public class PlayScreen implements Screen {
 
     @Override
     public void render(float delta) {
+        if (game.isPaused()) return;
+
         timeRemaining -= delta;
         animationTimer += delta;
 
@@ -74,7 +77,6 @@ public class PlayScreen implements Screen {
             return;
         }
 
-        // Handle input blocking for wrong matches
         if (inputBlocked) {
             inputBlockTimer += delta;
             if (inputBlockTimer >= 0.5f) {
@@ -105,7 +107,6 @@ public class PlayScreen implements Screen {
                     float offsetX = (TILE_SIZE - scaledWidth) / 2;
                     float offsetY = (TILE_SIZE - scaledHeight) / 2;
 
-                    // Apply vibration effect if needed
                     float vibrationOffsetX = 0;
                     float vibrationOffsetY = 0;
                     if (tile.isVibrating()) {
@@ -126,13 +127,18 @@ public class PlayScreen implements Screen {
         font.draw(batch, "Score: " + score, 50, viewport.getWorldHeight() - 100);
         batch.end();
 
-        if (!inputBlocked) {
+        if (!inputBlocked && !game.isPaused()) {
             handleTileSelection();
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             dispose();
             game.setScreen(new HomeScreen(game));
+        }
+        
+        if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
+            pauseGame();
+            game.setScreen(new PauseMenu(game, this));
         }
     }
 
@@ -168,14 +174,12 @@ public class PlayScreen implements Screen {
             if (firstSelectedTile.getNumber() == secondSelectedTile.getNumber() &&
                 firstSelectedTile.getColor().equals(secondSelectedTile.getColor())) {
 
-                // Special case for star tiles (number 3)
                 if (firstSelectedTile.getNumber() == 3) {
                     handleStarTileMatch(firstSelectedTile, secondSelectedTile);
                 } else {
                     combineTiles(firstSelectedTile, secondSelectedTile);
                 }
             } else {
-                // Wrong match - vibrate tiles and block input
                 firstSelectedTile.setVibrating(true);
                 secondSelectedTile.setVibrating(true);
                 vibratingTiles[0] = firstSelectedTile;
@@ -190,7 +194,6 @@ public class PlayScreen implements Screen {
     }
 
     private void handleStarTileMatch(Tile tile1, Tile tile2) {
-        // For star tiles, just reset both to level 1 tiles
         int row1 = tile1.getGridY();
         int col1 = tile1.getGridX();
         int row2 = tile2.getGridY();
@@ -199,7 +202,6 @@ public class PlayScreen implements Screen {
         String color1 = getRandomColor();
         String color2 = getRandomColor();
 
-        // Create new random tiles at both positions
         grid[row1][col1] = new Tile(1, color1, new Texture(color1 + "_tile_one.png"),
             tile1.getPosition(), col1, row1);
         grid[row1][col1].setAppearTime(animationTimer);
@@ -219,20 +221,18 @@ public class PlayScreen implements Screen {
         Texture newTexture;
 
         if (tile1.getNumber() == 2 && tile2.getNumber() == 2) {
-            newNumber = 3; // Star tile will be considered level 3
+            newNumber = 3;
             newTexture = new Texture(color + "_tile_star.png");
         } else {
             newTexture = new Texture(color + "_tile_" + newNumber + ".png");
         }
 
-        // Create new tile at second clicked position
         int secondRow = tile2.getGridY();
         int secondCol = tile2.getGridX();
         grid[secondRow][secondCol] = new Tile(newNumber, color, newTexture,
             tile2.getPosition(), secondCol, secondRow);
         grid[secondRow][secondCol].setAppearTime(animationTimer);
 
-        // Create new random tile at first clicked position (5x slower speed)
         int firstRow = tile1.getGridY();
         int firstCol = tile1.getGridX();
         String newColor = getRandomColor();
@@ -251,6 +251,38 @@ public class PlayScreen implements Screen {
         if (number == 2) return 50;
         if (number == 3) return 500;
         return 0;
+    }
+
+    public void pauseGame() {
+        isPaused = true;
+        pausedTimeRemaining = timeRemaining;
+        pausedScore = score;
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                if (grid[row][col] != null) {
+                    pausedGrid[row][col] = new Tile(grid[row][col]);
+                } else {
+                    pausedGrid[row][col] = null;
+                }
+            }
+        }
+    }
+
+    public void resumeGameFromPause() {
+        isPaused = false;
+        timeRemaining = pausedTimeRemaining;
+        score = pausedScore;
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                if (pausedGrid[row][col] != null) {
+                    grid[row][col] = new Tile(pausedGrid[row][col]);
+                } else {
+                    grid[row][col] = null;
+                }
+            }
+        }
+        firstSelectedTile = null;
+        secondSelectedTile = null;
     }
 
     @Override
