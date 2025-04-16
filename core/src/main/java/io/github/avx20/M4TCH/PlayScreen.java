@@ -66,7 +66,10 @@ public class PlayScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        if (game.isPaused()) return;
+        if (game.isPaused()) {
+            renderPausedState();
+            return;
+        }
 
         timeRemaining -= delta;
         animationTimer += delta;
@@ -138,7 +141,7 @@ public class PlayScreen implements Screen {
         
         if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
             pauseGame();
-            game.setScreen(new PauseMenu(game, this));
+            game.pauseGame();
         }
     }
 
@@ -168,6 +171,37 @@ public class PlayScreen implements Screen {
             }
         }
     }
+    private void renderPausedState() {
+    viewport.apply();
+    SpriteBatch batch = game.getBatch();
+    batch.setProjectionMatrix(viewport.getCamera().combined);
+
+    batch.begin();
+    batch.draw(gameBackground, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
+
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            Tile tile = grid[row][col];
+            if (tile != null) {
+                float scale = tile.getScale();
+                float scaledWidth = TILE_SIZE * scale;
+                float scaledHeight = TILE_SIZE * scale;
+                float offsetX = (TILE_SIZE - scaledWidth) / 2;
+                float offsetY = (TILE_SIZE - scaledHeight) / 2;
+
+                batch.draw(tile.getTexture(),
+                    tile.getPosition().x + offsetX,
+                    tile.getPosition().y + offsetY,
+                    scaledWidth, scaledHeight);
+            }
+        }
+    }
+
+    font.draw(batch, "Time: " + (int) pausedTimeRemaining, 50, viewport.getWorldHeight() - 50);
+    font.draw(batch, "Score: " + pausedScore, 50, viewport.getWorldHeight() - 100);
+    batch.end();
+}
+
 
     private void checkForMatch() {
         if (firstSelectedTile != null && secondSelectedTile != null) {

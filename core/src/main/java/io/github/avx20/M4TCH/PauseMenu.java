@@ -10,22 +10,21 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 
 public class PauseMenu implements Screen {
-    private boolean isPaused = true; // 默认暂停状态
+    private boolean isPaused = true;
     private BitmapFont font;
     private SpriteBatch batch;
     private Texture background, resume_button, restart_button, settings_icon, exit_button;
     private Rectangle resumeBounds, restartBounds, settingsBounds, mainMenuBounds;
-    private M4TCH game; // 添加 M4TCH 实例
-    private PlayScreen playScreen; // 添加 PlayScreen 实例
+    private M4TCH game;
+    private PlayScreen playScreen;
 
     private static final int BUTTON_WIDTH = 200;
     private static final int BUTTON_HEIGHT = 80;
-    private static final int BUTTON_SPACING = 50; // 按钮间距
+    private static final int BUTTON_SPACING = 50;
 
-    // 修改构造函数，添加 PlayScreen 作为参数
     public PauseMenu(M4TCH game, PlayScreen playScreen) {
-        this.game = game; // 赋值 game 实例
-        this.playScreen = playScreen; // 赋值 PlayScreen 实例
+        this.game = game;
+        this.playScreen = playScreen;
         font = new BitmapFont();
         batch = new SpriteBatch();
 
@@ -46,30 +45,29 @@ public class PauseMenu implements Screen {
 
     public void update() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
-            isPaused = false;
-            game.resumeGame(); // 调用 M4TCH 的 resumeGame 方法
+            game.resumeGame();
+            return;
         }
 
         if (Gdx.input.isTouched()) {
             int x = Gdx.input.getX();
-            int y = Gdx.graphics.getHeight() - Gdx.input.getY(); // 转换 y 坐标
+            int y = Gdx.graphics.getHeight() - Gdx.input.getY();
 
             if (resumeBounds.contains(x, y)) {
-                isPaused = false;
                 game.resumeGame();
-                // 确保 PlayScreen 的状态被正确恢复
-                playScreen.resumeGameFromPause();
             } else if (restartBounds.contains(x, y)) {
-                game.startGame(); // 重新开始游戏
+                game.startGame();
             } else if (mainMenuBounds.contains(x, y)) {
-                game.setScreen(new HomeScreen(game)); // 返回主菜单
+                playScreen.dispose(); 
+                game.setPaused(false);
+                game.setScreen(new HomeScreen(game));
             }
         }
     }
 
     @Override
     public void render(float delta) {
-        update(); // 在 render 方法中调用 update 方法
+        update();
 
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -86,29 +84,19 @@ public class PauseMenu implements Screen {
     }
 
     @Override
-    public void show() {
-        // 设置输入处理器（如果需要）
-    }
+    public void show() {}
 
     @Override
-    public void resize(int width, int height) {
-        // 处理窗口大小调整
-    }
+    public void resize(int width, int height) {}
 
     @Override
-    public void pause() {
-        // 处理游戏暂停
-    }
+    public void pause() {}
 
     @Override
-    public void resume() {
-        // 处理游戏恢复
-    }
+    public void resume() {}
 
     @Override
-    public void hide() {
-        // 处理屏幕隐藏
-    }
+    public void hide() {}
 
     @Override
     public void dispose() {

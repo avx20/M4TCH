@@ -13,20 +13,19 @@ public class M4TCH extends Game {
     private PlayScreen playScreen;
     private PauseMenu pauseMenu;
     private HomeScreen homeScreen;
-    private boolean paused = false; // Add the paused state
+    private boolean paused = false;
 
     @Override
     public void create() {
         batch = new SpriteBatch();
         viewport = new ScreenViewport();
 
-        // 设置游戏全屏模式
         Graphics.DisplayMode displayMode = Gdx.graphics.getDisplayMode();
         Gdx.graphics.setFullscreenMode(displayMode);
 
         homeScreen = new HomeScreen(this);
         playScreen = new PlayScreen(this);
-        pauseMenu = new PauseMenu(this, playScreen); // 传递 playScreen
+        pauseMenu = new PauseMenu(this, playScreen);
 
         setScreen(homeScreen);
     }
@@ -59,23 +58,23 @@ public class M4TCH extends Game {
     public void startGame() {
         playScreen = new PlayScreen(this);
         setScreen(playScreen);
-        paused = false; // Reset paused state when starting a new game
+        paused = false;
     }
 
     public void pauseGame() {
         paused = true;
-        setScreen(pauseMenu);
         if (playScreen != null) {
-            playScreen.pauseGame(); // Notify PlayScreen to save its state
+            playScreen.pauseGame();
         }
+        setScreen(pauseMenu);
     }
 
     public void resumeGame() {
         paused = false;
-        setScreen(playScreen);
         if (playScreen != null) {
-            playScreen.resumeGameFromPause(); // Notify PlayScreen to restore its state
+            playScreen.resumeGameFromPause();
         }
+        setScreen(playScreen);
     }
 
     public boolean isPaused() {
