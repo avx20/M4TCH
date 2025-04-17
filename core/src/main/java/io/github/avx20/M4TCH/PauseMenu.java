@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 
 public class PauseMenu implements Screen {
+
     private boolean isPaused = true;
     private BitmapFont font;
     private SpriteBatch batch;
@@ -18,20 +19,31 @@ public class PauseMenu implements Screen {
     private M4TCH game;
     private PlayScreen playScreen;
 
-    private static final int BUTTON_WIDTH = 200;
-    private static final int BUTTON_HEIGHT = 80;
+    // 每个按钮的独立尺寸
+    private static final int RESUME_BUTTON_WIDTH = 200;
+    private static final int RESUME_BUTTON_HEIGHT = 60;
+
+    private static final int RESTART_BUTTON_WIDTH = 220;
+    private static final int RESTART_BUTTON_HEIGHT = 130;
+
+    private static final int SETTINGS_BUTTON_WIDTH = 150;
+    private static final int SETTINGS_BUTTON_HEIGHT = 80;
+
+    private static final int EXIT_BUTTON_WIDTH = 200;
+    private static final int EXIT_BUTTON_HEIGHT = 80;
+
     private static final int BUTTON_SPACING = 50;
 
-    // 按钮缩放动画
+    // 缩放动画
     private float resumeScale = 1f, restartScale = 1f, settingsScale = 1f, exitScale = 1f;
     private static final float SCALE_DOWN = 0.9f;
     private static final float SCALE_SPEED = 5f;
 
-    // 延迟执行
+    // 动画延迟执行
     private enum ButtonType { NONE, RESUME, RESTART, SETTINGS, EXIT }
     private ButtonType clickedButton = ButtonType.NONE;
     private float clickTimer = 0f;
-    private static final float CLICK_ANIMATION_DURATION = 0.25f;
+    private static final float CLICK_ANIMATION_DURATION = 0.5f;
 
     public PauseMenu(M4TCH game, PlayScreen playScreen) {
         this.game = game;
@@ -45,20 +57,70 @@ public class PauseMenu implements Screen {
         settings_icon = new Texture("settings_icon.png");
         exit_button = new Texture("exit_button.png");
 
-        int centerX = Gdx.graphics.getWidth() / 2 - BUTTON_WIDTH;
-        int centerY = Gdx.graphics.getHeight() / 2 + BUTTON_HEIGHT;
+        int centerX = Gdx.graphics.getWidth() / 2;
+        int centerY = Gdx.graphics.getHeight() / 2;
+        float topY = Gdx.graphics.getHeight() / 2 + 150; // 初始顶部Y位置（你可以自己调）
 
-        resumeBounds = new Rectangle(centerX, centerY, BUTTON_WIDTH, BUTTON_HEIGHT);
-        restartBounds = new Rectangle(centerX + BUTTON_WIDTH + BUTTON_SPACING, centerY, BUTTON_WIDTH, BUTTON_HEIGHT);
-        settingsBounds = new Rectangle(centerX, centerY - BUTTON_HEIGHT - BUTTON_SPACING, BUTTON_WIDTH, BUTTON_HEIGHT);
-        mainMenuBounds = new Rectangle(centerX + BUTTON_WIDTH + BUTTON_SPACING, centerY - BUTTON_HEIGHT - BUTTON_SPACING, BUTTON_WIDTH, BUTTON_HEIGHT);
+        // Resume 按钮（顶部）
+        resumeBounds = new Rectangle(
+            centerX - RESUME_BUTTON_WIDTH / 2f,
+            topY,
+            RESUME_BUTTON_WIDTH,
+            RESUME_BUTTON_HEIGHT
+        );
+
+        // Restart 按钮
+        restartBounds = new Rectangle(
+            centerX - RESTART_BUTTON_WIDTH / 2f,
+            resumeBounds.y - RESUME_BUTTON_HEIGHT - BUTTON_SPACING,
+            RESTART_BUTTON_WIDTH,
+            RESTART_BUTTON_HEIGHT
+        );
+
+        // Settings 按钮
+        settingsBounds = new Rectangle(
+            centerX - SETTINGS_BUTTON_WIDTH / 2f,
+            restartBounds.y - RESTART_BUTTON_HEIGHT - BUTTON_SPACING,
+            SETTINGS_BUTTON_WIDTH,
+            SETTINGS_BUTTON_HEIGHT
+        );
+
+        // Exit 按钮
+        mainMenuBounds = new Rectangle(
+            centerX - EXIT_BUTTON_WIDTH / 2f,
+            settingsBounds.y - SETTINGS_BUTTON_HEIGHT - BUTTON_SPACING,
+            EXIT_BUTTON_WIDTH,
+            EXIT_BUTTON_HEIGHT
+        );
+
+
+        restartBounds = new Rectangle(
+            centerX - RESTART_BUTTON_WIDTH / 2,
+            centerY,
+            RESTART_BUTTON_WIDTH,
+            RESTART_BUTTON_HEIGHT
+        );
+
+        settingsBounds = new Rectangle(
+            centerX - SETTINGS_BUTTON_WIDTH / 2,
+            centerY - SETTINGS_BUTTON_HEIGHT - BUTTON_SPACING / 2,
+            SETTINGS_BUTTON_WIDTH,
+            SETTINGS_BUTTON_HEIGHT
+        );
+
+        mainMenuBounds = new Rectangle(
+            centerX - EXIT_BUTTON_WIDTH / 2,
+            centerY - (SETTINGS_BUTTON_HEIGHT + EXIT_BUTTON_HEIGHT + BUTTON_SPACING * 1.5f),
+            EXIT_BUTTON_WIDTH,
+            EXIT_BUTTON_HEIGHT
+        );
+
     }
 
     public void update(float delta) {
         if (clickedButton != ButtonType.NONE) {
             clickTimer += delta;
             if (clickTimer >= CLICK_ANIMATION_DURATION) {
-                // 动画完成，执行操作
                 switch (clickedButton) {
                     case RESUME:
                         game.resumeGame();
@@ -72,13 +134,13 @@ public class PauseMenu implements Screen {
                         game.setScreen(new HomeScreen(game));
                         break;
                     case SETTINGS:
-                        // 可扩展：打开设置菜单
+                        // 未来可扩展设置功能
                         break;
                 }
                 clickedButton = ButtonType.NONE;
                 clickTimer = 0f;
             }
-            return; // 动画期间不处理其他点击
+            return;
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
@@ -104,6 +166,12 @@ public class PauseMenu implements Screen {
                 exitScale = SCALE_DOWN;
             }
         }
+
+        // 实时更新点击区域尺寸（可选，若尺寸不会变化也可省略）
+        resumeBounds.setSize(RESUME_BUTTON_WIDTH, RESUME_BUTTON_HEIGHT);
+        restartBounds.setSize(RESTART_BUTTON_WIDTH, RESTART_BUTTON_HEIGHT);
+        settingsBounds.setSize(SETTINGS_BUTTON_WIDTH, SETTINGS_BUTTON_HEIGHT);
+        mainMenuBounds.setSize(EXIT_BUTTON_WIDTH, EXIT_BUTTON_HEIGHT);
     }
 
     private void smoothScale(float delta) {
@@ -126,29 +194,33 @@ public class PauseMenu implements Screen {
         batch.begin();
         batch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
+        // Resume
         batch.draw(resume_button,
-                resumeBounds.x + (BUTTON_WIDTH * (1 - resumeScale) / 2),
-                resumeBounds.y + (BUTTON_HEIGHT * (1 - resumeScale) / 2),
-                BUTTON_WIDTH * resumeScale,
-                BUTTON_HEIGHT * resumeScale);
+                resumeBounds.x + (RESUME_BUTTON_WIDTH * (1 - resumeScale) / 2),
+                resumeBounds.y + (RESUME_BUTTON_HEIGHT * (1 - resumeScale) / 2),
+                RESUME_BUTTON_WIDTH * resumeScale,
+                RESUME_BUTTON_HEIGHT * resumeScale);
 
+        // Restart
         batch.draw(restart_button,
-                restartBounds.x + (BUTTON_WIDTH * (1 - restartScale) / 2),
-                restartBounds.y + (BUTTON_HEIGHT * (1 - restartScale) / 2),
-                BUTTON_WIDTH * restartScale,
-                BUTTON_HEIGHT * restartScale);
+                restartBounds.x + (RESTART_BUTTON_WIDTH * (1 - restartScale) / 2),
+                restartBounds.y + (RESTART_BUTTON_HEIGHT * (1 - restartScale) / 2),
+                RESTART_BUTTON_WIDTH * restartScale,
+                RESTART_BUTTON_HEIGHT * restartScale);
 
+        // Settings
         batch.draw(settings_icon,
-                settingsBounds.x + (BUTTON_WIDTH * (1 - settingsScale) / 2),
-                settingsBounds.y + (BUTTON_HEIGHT * (1 - settingsScale) / 2),
-                BUTTON_WIDTH * settingsScale,
-                BUTTON_HEIGHT * settingsScale);
+                settingsBounds.x + (SETTINGS_BUTTON_WIDTH * (1 - settingsScale) / 2),
+                settingsBounds.y + (SETTINGS_BUTTON_HEIGHT * (1 - settingsScale) / 2),
+                SETTINGS_BUTTON_WIDTH * settingsScale,
+                SETTINGS_BUTTON_HEIGHT * settingsScale);
 
+        // Exit
         batch.draw(exit_button,
-                mainMenuBounds.x + (BUTTON_WIDTH * (1 - exitScale) / 2),
-                mainMenuBounds.y + (BUTTON_HEIGHT * (1 - exitScale) / 2),
-                BUTTON_WIDTH * exitScale,
-                BUTTON_HEIGHT * exitScale);
+                mainMenuBounds.x + (EXIT_BUTTON_WIDTH * (1 - exitScale) / 2),
+                mainMenuBounds.y + (EXIT_BUTTON_HEIGHT * (1 - exitScale) / 2),
+                EXIT_BUTTON_WIDTH * exitScale,
+                EXIT_BUTTON_HEIGHT * exitScale);
 
         batch.end();
     }
