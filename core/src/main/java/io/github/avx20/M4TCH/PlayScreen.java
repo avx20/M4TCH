@@ -133,13 +133,8 @@ public class PlayScreen implements Screen {
         if (!inputBlocked && !game.isPaused()) {
             handleTileSelection();
         }
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            dispose();
-            game.setScreen(new HomeScreen(game));
-        }
         
-        if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             pauseGame();
             game.pauseGame();
         }

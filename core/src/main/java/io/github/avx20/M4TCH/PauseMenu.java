@@ -44,7 +44,7 @@ public class PauseMenu implements Screen {
     }
 
     public void update() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             game.resumeGame();
             return;
         }
