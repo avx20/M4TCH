@@ -23,14 +23,17 @@ public class GameOverScreen implements Screen {
     private Rectangle exitButtonBounds;
     private Viewport viewport;
     private BitmapFont font;
-    
+
     // Final score and best score
     private final int finalScore;
     private int bestScore = 0; // This could load from storage
-    
+
     // Button click feedback
     private boolean isRestartButtonClicked = false;
     private boolean isExitButtonClicked = false;
+
+    // Flag to ensure we only record the score once
+    private boolean scoreRecorded = false;
 
     // Debug variables
     private boolean debugMode = false; // Set to true to see button boundaries
@@ -54,7 +57,7 @@ public class GameOverScreen implements Screen {
             bestScore = finalScore;
             // Could save the new high score here
         }
-        
+
         this.viewport = new FitViewport(1920, 1080);
         this.font = new BitmapFont();
         font.getData().setScale(3.0f); // Scale up font for better visibility
@@ -71,7 +74,7 @@ public class GameOverScreen implements Screen {
             // Load button textures using your custom images
             this.restartButtonTexture = new Texture("restart_button.png");
             this.exitButtonTexture = new Texture("exit_button.png");
-            
+
             // For debug mode
             if (debugMode) {
                 // Create a 1x1 white pixel texture for debug purposes
@@ -87,14 +90,14 @@ public class GameOverScreen implements Screen {
 
         // Initialize button areas
         float centerX = viewport.getWorldWidth() / 2;
-        
+
         // Calculate visual sizes for the buttons (for rendering)
         if (restartButtonTexture != null) {
             restartVisualWidth = restartButtonTexture.getWidth() * 0.4f; // Scale down to 40%
             restartVisualHeight = restartButtonTexture.getHeight() * 0.4f;
             restartVisualX = centerX - restartVisualWidth / 2;
             restartVisualY = 300; // Keep original position
-            
+
             // Create a smaller hit area for RESTART button
             restartButtonBounds = new Rectangle(
                 restartVisualX + 20, // Add padding to make hit area smaller than visual
@@ -103,13 +106,13 @@ public class GameOverScreen implements Screen {
                 restartVisualHeight - 40  // Reduce height by padding on both sides
             );
         }
-        
+
         if (exitButtonTexture != null) {
             exitVisualWidth = exitButtonTexture.getWidth() * 0.4f;
             exitVisualHeight = exitButtonTexture.getHeight() * 0.4f;
             exitVisualX = centerX - exitVisualWidth / 2;
             exitVisualY = 200; // Keep original position
-            
+
             // Create hit area for EXIT button
             exitButtonBounds = new Rectangle(
                 exitVisualX,
@@ -118,6 +121,26 @@ public class GameOverScreen implements Screen {
                 exitVisualHeight
             );
         }
+
+        // Record the score to the leaderboard when the screen is created
+        recordScore();
+    }
+
+    // Method to record the score to the leaderboard
+    private void recordScore() {
+        if (!scoreRecorded && finalScore > 0) {
+            try {
+                // Create a LeaderboardScreen to add the score
+                LeaderboardScreen leaderboard = new LeaderboardScreen(game);
+                leaderboard.addScore(finalScore);
+                Gdx.app.log("GameOverScreen", "Score " + finalScore + " recorded successfully");
+                scoreRecorded = true;
+
+                // Don't dispose the leaderboard here, as it might interrupt the save operation
+            } catch (Exception e) {
+                Gdx.app.error("GameOverScreen", "Failed to record score", e);
+            }
+        }
     }
 
     @Override
@@ -125,7 +148,7 @@ public class GameOverScreen implements Screen {
         // Clear screen
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.3f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        
+
         viewport.apply();
         SpriteBatch batch = game.getBatch();
         batch.setProjectionMatrix(viewport.getCamera().combined);
@@ -141,15 +164,24 @@ public class GameOverScreen implements Screen {
         if (background == null) {
             font.draw(batch, "GAME OVER", viewport.getWorldWidth()/2 - 150, 800);
         }
-        
+
         // Draw score info
         String finalScoreText = "Your Score: " + finalScore;
         float finalScoreX = viewport.getWorldWidth()/2 - 200;
         font.draw(batch, finalScoreText, finalScoreX, 700);
-        
+
         String bestScoreText = "Best Score: " + bestScore;
         float bestScoreX = viewport.getWorldWidth()/2 - 200;
         font.draw(batch, bestScoreText, bestScoreX, 650);
+
+        // Add a notification that the score has been recorded
+        if (scoreRecorded) {
+            String recordedText = "Score recorded to leaderboard!";
+            float recordedX = viewport.getWorldWidth()/2 - 250;
+            font.setColor(0.2f, 1f, 0.2f, 1f); // Green color
+            font.draw(batch, recordedText, recordedX, 600);
+            font.setColor(1f, 1f, 1f, 1f); // Reset to white
+        }
 
         // Draw buttons
         if (restartButtonTexture != null) {
@@ -166,15 +198,15 @@ public class GameOverScreen implements Screen {
                 y += (restartVisualHeight - height) / 2;
             }
             batch.draw(restartButtonTexture, x, y, width, height);
-            
+
             // DEBUG: Draw RESTART button bounds
             if (debugMode && debugTexture != null) {
                 batch.setColor(1, 0, 0, 0.5f); // Semi-transparent red
-                batch.draw(debugTexture, restartButtonBounds.x, restartButtonBounds.y, 
-                         restartButtonBounds.width, restartButtonBounds.height);
+                batch.draw(debugTexture, restartButtonBounds.x, restartButtonBounds.y,
+                    restartButtonBounds.width, restartButtonBounds.height);
             }
         }
-        
+
         if (exitButtonTexture != null) {
             float width = exitVisualWidth;
             float height = exitVisualHeight;
@@ -189,12 +221,12 @@ public class GameOverScreen implements Screen {
                 y += (exitVisualHeight - height) / 2;
             }
             batch.draw(exitButtonTexture, x, y, width, height);
-            
+
             // DEBUG: Draw EXIT button bounds
             if (debugMode && debugTexture != null) {
                 batch.setColor(0, 1, 0, 0.5f); // Semi-transparent green
-                batch.draw(debugTexture, exitButtonBounds.x, exitButtonBounds.y, 
-                         exitButtonBounds.width, exitButtonBounds.height);
+                batch.draw(debugTexture, exitButtonBounds.x, exitButtonBounds.y,
+                    exitButtonBounds.width, exitButtonBounds.height);
                 batch.setColor(1, 1, 1, 1); // Reset color
             }
         }
@@ -210,7 +242,7 @@ public class GameOverScreen implements Screen {
             // Get screen coordinates
             float screenX = Gdx.input.getX();
             float screenY = Gdx.input.getY();
-            
+
             // Convert screen coordinates to world coordinates
             Vector3 worldCoords = viewport.unproject(new Vector3(screenX, screenY, 0));
             float worldX = worldCoords.x;
@@ -220,7 +252,7 @@ public class GameOverScreen implements Screen {
             if (debugMode) {
                 Gdx.app.log("GameOverScreen", "Touch at: " + worldX + ", " + worldY);
             }
-            
+
             // Check for button clicks
             // 1. First check if click is in the EXIT button area
             if (exitButtonBounds != null && exitButtonBounds.contains(worldX, worldY)) {

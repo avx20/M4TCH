@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonReader;
@@ -16,11 +17,10 @@ import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.badlogic.gdx.files.FileHandle;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class LeaderboardScreen implements Screen {
     private final M4TCH game;
@@ -34,8 +34,8 @@ public class LeaderboardScreen implements Screen {
     private Array<LeaderboardEntry> leaderboardEntries;
     private GlyphLayout layout;
 
-    // File to store leaderboard data
-    private static final String LEADERBOARD_FILE = "core/assets/leaderboard.json";
+    // File to store leaderboard data - simplified path
+    private static final String LEADERBOARD_FILE = "leaderboard.json";
 
     public LeaderboardScreen(M4TCH game) {
         this.game = game;
@@ -53,28 +53,52 @@ public class LeaderboardScreen implements Screen {
             Gdx.app.error("LeaderboardScreen", "Error loading textures", e);
         }
 
-        // Initialize fonts
+        // Initialize fonts using the correct font path
         try {
-            titleFont = new BitmapFont(Gdx.files.internal("core/assets/uiskin.atlas"), Gdx.files.internal("core/assets/font.ttf"), false);
-            titleFont.setColor(Color.WHITE);
-            titleFont.getData().setScale(4f);  // Even larger scale for title
+            // Use FreeTypeFontGenerator for better font rendering if available
+            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("font.ttf"));
 
-            entryFont = new BitmapFont(Gdx.files.internal("core/assets/uiskin.atlas"), Gdx.files.internal("core/assets/font.ttf"), false);
-            entryFont.setColor(Color.YELLOW);
-            entryFont.getData().setScale(2.5f);  // Larger scale for entries
+            // For title font (largest)
+            FreeTypeFontGenerator.FreeTypeFontParameter titleParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
+            titleParams.size = 64; // Increased base size
+            titleParams.color = Color.WHITE;
+            titleFont = generator.generateFont(titleParams);
+            titleFont.getData().setScale(1.5f); // Reduced scale from 4.0f to 1.5f
 
-            noScoresFont = new BitmapFont(Gdx.files.internal("core/assets/uiskin.atlas"), Gdx.files.internal("core/assets/font.ttf"), false);
-            noScoresFont.setColor(Color.GRAY);
-            noScoresFont.getData().setScale(2.0f);  // Larger scale for "no scores" message
+            // For entry font (medium)
+            FreeTypeFontGenerator.FreeTypeFontParameter entryParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
+            entryParams.size = 36;
+            entryParams.color = Color.YELLOW;
+            entryFont = generator.generateFont(entryParams);
+            entryFont.getData().setScale(1.2f); // Reduced scale from 2.5f to 1.2f
+
+            // For "no scores" font (smaller)
+            FreeTypeFontGenerator.FreeTypeFontParameter noScoresParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
+            noScoresParams.size = 30;
+            noScoresParams.color = Color.GRAY;
+            noScoresFont = generator.generateFont(noScoresParams);
+            noScoresFont.getData().setScale(1.0f); // Reduced scale from 2.0f to 1.0f
+
+            // Dispose generator after use
+            generator.dispose();
+
+            Gdx.app.log("LeaderboardScreen", "Custom font loaded successfully");
         } catch (Exception e) {
-            Gdx.app.error("LeaderboardScreen", "Error loading fonts", e);
+            Gdx.app.error("LeaderboardScreen", "Error loading custom font: " + e.getMessage(), e);
             // Fallback to default bitmap font if custom font fails
             titleFont = new BitmapFont();
-            titleFont.getData().setScale(4f);
+            titleFont.getData().setScale(1.5f);
+            titleFont.setColor(Color.WHITE);
+
             entryFont = new BitmapFont();
-            entryFont.getData().setScale(2.5f);
+            entryFont.getData().setScale(1.2f);
+            entryFont.setColor(Color.YELLOW);
+
             noScoresFont = new BitmapFont();
-            noScoresFont.getData().setScale(2.0f);
+            noScoresFont.getData().setScale(1.0f);
+            noScoresFont.setColor(Color.GRAY);
+
+            Gdx.app.log("LeaderboardScreen", "Using default font as fallback");
         }
 
         // Load leaderboard entries
@@ -83,20 +107,30 @@ public class LeaderboardScreen implements Screen {
 
     // Method to add a new score to leaderboard
     public void addScore(int score) {
-        leaderboardEntries.add(new LeaderboardEntry("Player", score));
+        // Get current timestamp
+        String timestamp = getCurrentTimestamp();
+        leaderboardEntries.add(new LeaderboardEntry("Player", score, timestamp));
         sortAndTrimLeaderboard();
         saveLeaderboardEntries();
     }
 
     // Method to add a new score with player name
     public void addScore(String playerName, int score) {
-        leaderboardEntries.add(new LeaderboardEntry(playerName, score));
+        // Get current timestamp
+        String timestamp = getCurrentTimestamp();
+        leaderboardEntries.add(new LeaderboardEntry(playerName, score, timestamp));
         sortAndTrimLeaderboard();
         saveLeaderboardEntries();
     }
 
+    // Helper method to get the current timestamp in a readable format
+    private String getCurrentTimestamp() {
+        SimpleDateFormat sdf = new SimpleDateFormat("MM/dd HH:mm");
+        return sdf.format(new Date());
+    }
+
     private void sortAndTrimLeaderboard() {
-        // Sort in descending order
+        // Sort in descending order by score
         leaderboardEntries.sort((a, b) -> Integer.compare(b.score, a.score));
 
         // Keep only top 10 entries
@@ -108,21 +142,22 @@ public class LeaderboardScreen implements Screen {
     private Array<LeaderboardEntry> loadLeaderboardEntries() {
         Array<LeaderboardEntry> entries = new Array<>();
         try {
-            File file = new File(LEADERBOARD_FILE);
-            if (!file.exists()) {
-                // Start with an empty leaderboard instead of default entries
+            FileHandle fileHandle = Gdx.files.local(LEADERBOARD_FILE);
+            if (fileHandle.exists()) {
+                JsonReader jsonReader = new JsonReader();
+                JsonValue base = jsonReader.parse(fileHandle);
+
+                for (JsonValue entry = base.child; entry != null; entry = entry.next) {
+                    entries.add(new LeaderboardEntry(
+                        entry.getString("name"),
+                        entry.getInt("score"),
+                        entry.getString("timestamp", "N/A")  // Default to "N/A" if timestamp is missing
+                    ));
+                }
+                Gdx.app.log("LeaderboardScreen", "Loaded " + entries.size + " leaderboard entries");
+            } else {
+                Gdx.app.log("LeaderboardScreen", "Leaderboard file doesn't exist, creating new one");
                 saveLeaderboardEntries();
-                return entries;
-            }
-
-            JsonReader jsonReader = new JsonReader();
-            JsonValue base = jsonReader.parse(new FileReader(file));
-
-            for (JsonValue entry = base.child; entry != null; entry = entry.next) {
-                entries.add(new LeaderboardEntry(
-                    entry.getString("name"),
-                    entry.getInt("score")
-                ));
             }
         } catch (Exception e) {
             Gdx.app.error("LeaderboardScreen", "Error loading leaderboard", e);
@@ -131,11 +166,13 @@ public class LeaderboardScreen implements Screen {
     }
 
     private void saveLeaderboardEntries() {
-        try (FileWriter writer = new FileWriter(LEADERBOARD_FILE)) {
+        try {
+            FileHandle fileHandle = Gdx.files.local(LEADERBOARD_FILE);
             Json json = new Json();
             json.setOutputType(JsonWriter.OutputType.json);
-            writer.write(json.toJson(leaderboardEntries));
-        } catch (IOException e) {
+            fileHandle.writeString(json.toJson(leaderboardEntries), false);
+            Gdx.app.log("LeaderboardScreen", "Leaderboard saved successfully");
+        } catch (Exception e) {
             Gdx.app.error("LeaderboardScreen", "Error saving leaderboard", e);
         }
     }
@@ -158,8 +195,8 @@ public class LeaderboardScreen implements Screen {
 
         // Draw leaderboard frame with a slightly larger size to make it more prominent
         if (leaderboardFrameTexture != null) {
-            float frameWidth = leaderboardFrameTexture.getWidth() * 1.3f;
-            float frameHeight = leaderboardFrameTexture.getHeight() * 1.3f;
+            float frameWidth = viewport.getWorldWidth() * 0.75f;  // Use percentage of screen width
+            float frameHeight = viewport.getWorldHeight() * 0.75f; // Use percentage of screen height
 
             batch.draw(leaderboardFrameTexture,
                 viewport.getWorldWidth() / 2 - frameWidth / 2,
@@ -173,32 +210,52 @@ public class LeaderboardScreen implements Screen {
         layout.setText(titleFont, title);
         float titleWidth = layout.width;
 
+        // Title positioned with more space from top
+        float titleY = viewport.getWorldHeight() - 150;
+
         // Draw shadow for title text
         Color originalColor = titleFont.getColor();
         titleFont.setColor(0, 0, 0, 0.5f);
         titleFont.draw(batch, title,
-            viewport.getWorldWidth() / 2 - titleWidth / 2 + 6,  // Larger offset for larger text
-            viewport.getWorldHeight() - 100 - 6
+            viewport.getWorldWidth() / 2 - titleWidth / 2 + 4,  // Smaller offset for shadow
+            titleY - 4
         );
 
         // Draw title text
         titleFont.setColor(originalColor);
         titleFont.draw(batch, title,
             viewport.getWorldWidth() / 2 - titleWidth / 2,
-            viewport.getWorldHeight() - 100
+            titleY
         );
 
-        // Draw ESC instruction text at the bottom
+        // Draw column headers with proper spacing
+        float headersY = titleY - 100; // More spacing between title and headers
+        float nameX = viewport.getWorldWidth() / 2 - 350;
+        float timeX = viewport.getWorldWidth() / 2;  // Centered time column
+        float scoreX = viewport.getWorldWidth() / 2 + 350; // Increased space between time and score
+
+        noScoresFont.setColor(Color.WHITE);
+        noScoresFont.draw(batch, "PLAYER", nameX, headersY);
+
+        // Center align the TIME header
+        layout.setText(noScoresFont, "TIME");
+        noScoresFont.draw(batch, "TIME", timeX - layout.width / 2, headersY);
+
+        // Center align the SCORE header
+        layout.setText(noScoresFont, "SCORE");
+        noScoresFont.draw(batch, "SCORE", scoreX - layout.width / 2, headersY);
+
+        // Draw ESC instruction text at the bottom with proper spacing
         String escText = "Press ESC to return";
         noScoresFont.setColor(Color.LIGHT_GRAY);
         layout.setText(noScoresFont, escText);
         noScoresFont.draw(batch, escText,
             viewport.getWorldWidth() / 2 - layout.width / 2,
-            80  // Position at bottom of screen
+            100  // Position at bottom of screen with proper spacing
         );
 
         // Draw leaderboard entries or "No scores yet" message
-        float startY = viewport.getWorldHeight() - 280;  // Moved down a bit to accommodate larger title
+        float startY = headersY - 60;  // Better spacing from headers
 
         if (leaderboardEntries.size == 0) {
             // Display "No scores yet" message if there are no entries
@@ -209,11 +266,12 @@ public class LeaderboardScreen implements Screen {
                 viewport.getWorldHeight() / 2
             );
         } else {
-            // Draw available leaderboard entries with improved visual hierarchy
+            // Draw available leaderboard entries with improved visual hierarchy and spacing
             for (int i = 0; i < leaderboardEntries.size; i++) {
                 LeaderboardEntry entry = leaderboardEntries.get(i);
                 String rankText = String.format("%d.", i + 1);
                 String nameText = entry.name;
+                String timeText = entry.timestamp;
                 String scoreText = String.valueOf(entry.score);
 
                 // Set color based on rank
@@ -222,24 +280,31 @@ public class LeaderboardScreen implements Screen {
                 else if (i == 2) entryFont.setColor(0.65f, 0.16f, 0.16f, 1f); // Bronze color
                 else entryFont.setColor(Color.WHITE);
 
+                // Increased vertical spacing between entries
+                float rowY = startY - (i * 55);  // Adjusted spacing for better readability
+
                 // Draw rank (aligned right)
                 layout.setText(entryFont, rankText);
                 entryFont.draw(batch, rankText,
-                    viewport.getWorldWidth() / 2 - 270 - layout.width,  // Moved further left for better spacing
-                    startY - (i * 90)  // Increased vertical spacing for larger text
+                    nameX - layout.width - 20,  // Better spacing
+                    rowY
                 );
 
                 // Draw name (aligned left)
-                entryFont.draw(batch, nameText,
-                    viewport.getWorldWidth() / 2 - 220,  // Adjusted for better spacing
-                    startY - (i * 90)
+                entryFont.draw(batch, nameText, nameX, rowY);
+
+                // Draw timestamp (center aligned)
+                layout.setText(entryFont, timeText);
+                entryFont.draw(batch, timeText,
+                    timeX - layout.width / 2,
+                    rowY
                 );
 
-                // Draw score (aligned right)
+                // Draw score (center aligned with header)
                 layout.setText(entryFont, scoreText);
                 entryFont.draw(batch, scoreText,
-                    viewport.getWorldWidth() / 2 + 220 - layout.width,  // Adjusted for better spacing
-                    startY - (i * 90)
+                    scoreX - layout.width / 2,
+                    rowY
                 );
             }
         }
@@ -273,14 +338,20 @@ public class LeaderboardScreen implements Screen {
         noScoresFont.dispose();
     }
 
-    // Helper class for leaderboard entries
-    private static class LeaderboardEntry {
-        String name;
-        int score;
+    // Helper class for leaderboard entries (enhanced with timestamp)
+    public static class LeaderboardEntry {
+        public String name;
+        public int score;
+        public String timestamp;
 
-        LeaderboardEntry(String name, int score) {
+        public LeaderboardEntry() {
+            // No-arg constructor needed for JSON serialization
+        }
+
+        public LeaderboardEntry(String name, int score, String timestamp) {
             this.name = name;
             this.score = score;
+            this.timestamp = timestamp;
         }
     }
 
