@@ -3,6 +3,7 @@ package io.github.avx20.M4TCH;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -18,6 +19,8 @@ public class PlayScreen implements Screen {
     private Viewport viewport;
     private float timeRemaining = 60;
     private int score = 0;
+    private Sound matchSuccessSound;
+    private Sound matchFailSound;
 
     private Tile[][] grid = new Tile[4][4];
     private final float TILE_SIZE = 200;
@@ -42,6 +45,8 @@ public class PlayScreen implements Screen {
         this.gameBackground = new Texture("game_bg.png");
         this.font = new BitmapFont();
         initializeGrid();
+        matchSuccessSound = Gdx.audio.newSound(Gdx.files.internal("match_success.mp3"));
+        matchFailSound = Gdx.audio.newSound(Gdx.files.internal("match_fail.mp3"));
     }
 
     private void initializeGrid() {
@@ -209,6 +214,7 @@ public class PlayScreen implements Screen {
                     combineTiles(firstSelectedTile, secondSelectedTile);
                 }
             } else {
+                matchFailSound.play();
                 firstSelectedTile.setVibrating(true);
                 secondSelectedTile.setVibrating(true);
                 vibratingTiles[0] = firstSelectedTile;
@@ -223,6 +229,7 @@ public class PlayScreen implements Screen {
     }
 
     private void handleStarTileMatch(Tile tile1, Tile tile2) {
+        matchSuccessSound.play();
         int row1 = tile1.getGridY();
         int col1 = tile1.getGridX();
         int row2 = tile2.getGridY();
@@ -245,6 +252,7 @@ public class PlayScreen implements Screen {
     }
 
     private void combineTiles(Tile tile1, Tile tile2) {
+        matchSuccessSound.play();
         int newNumber = tile1.getNumber() + 1;
         String color = tile1.getColor();
         Texture newTexture;
@@ -333,6 +341,8 @@ public class PlayScreen implements Screen {
 
     @Override
     public void dispose() {
+        matchSuccessSound.dispose();
+        matchFailSound.dispose();
         gameBackground.dispose();
         font.dispose();
         for (int row = 0; row < 4; row++) {
