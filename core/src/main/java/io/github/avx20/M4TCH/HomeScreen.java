@@ -134,8 +134,7 @@ public class HomeScreen implements Screen {
                     @Override
                     public void run() {
                         isSettingsButtonClicked = false;
-                        // Will be implemented when SettingsScreen is available
-                        // game.setScreen(new SettingsScreen(game));
+                        game.setScreen(new SettingScreen(game));
                     }
                 }, 0.1f);
             } else if (leaderboardButtonBounds.contains(worldX, worldY)) {
@@ -187,3 +186,4 @@ public class HomeScreen implements Screen {
         exitButtonTexture.dispose();
     }
 }
+
