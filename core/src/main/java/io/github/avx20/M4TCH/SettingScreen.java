@@ -16,7 +16,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.Preferences;
 
-public class SettingsScreen implements Screen, M4TCH.VolumeChangeListener {
+public class SettingScreen implements Screen, M4TCH.VolumeChangeListener {
     private final M4TCH game;
     private SpriteBatch batch;
     private Viewport viewport;
@@ -48,7 +48,7 @@ public class SettingsScreen implements Screen, M4TCH.VolumeChangeListener {
     private static final float BACK_BUTTON_WIDTH = 200f;
     private static final float BACK_BUTTON_HEIGHT = 80f;
 
-    public SettingsScreen(M4TCH game) {
+    public SettingScreen(M4TCH game) {
         this.game = game;
         this.viewport = new FitViewport(1920, 1080);
         this.batch = new SpriteBatch();
