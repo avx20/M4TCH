@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
@@ -33,12 +34,12 @@ public class PlayScreen implements Screen {
     private boolean inputBlocked = false;
     private float inputBlockTimer = 0;
     private Tile[] vibratingTiles = new Tile[2];
-    
+
     private boolean isPaused = false;
     private float pausedTimeRemaining;
     private int pausedScore;
     private Tile[][] pausedGrid = new Tile[4][4];
-    
+
     // Power-up states
     private boolean freezeTimeActive = false;
     private float freezeTimeRemaining = 0;
@@ -46,12 +47,15 @@ public class PlayScreen implements Screen {
     private float comboMultiplierRemaining = 0;
     private boolean instantTilesActive = false;
     private float instantTilesRemaining = 0;
-    
+
     // Combo system
     private int comboMultiplier = 1;
     private float comboTimeRemaining = 0;
     private boolean redMatchDuringAllPowerUps = false;
     private int redComboCount = 0;
+
+    // 触摸位置转换用
+    private Vector3 touchPos = new Vector3();
 
     public PlayScreen(M4TCH game) {
         this.game = game;
@@ -92,14 +96,14 @@ public class PlayScreen implements Screen {
 
         // Update power-up timers
         updatePowerUpTimers(delta);
-        
+
         // Update time remaining (considering freeze time power-up)
         if (!freezeTimeActive) {
             timeRemaining -= delta;
         } else {
             timeRemaining -= delta * 0.5f; // 50% slower
         }
-        
+
         animationTimer += delta;
 
         if (timeRemaining <= 0) {
@@ -156,7 +160,7 @@ public class PlayScreen implements Screen {
 
         font.draw(batch, "Time: " + (int) timeRemaining, 50, viewport.getWorldHeight() - 50);
         font.draw(batch, "Score: " + score, 50, viewport.getWorldHeight() - 100);
-        
+
         // Display power-up status
         if (freezeTimeActive) {
             font.draw(batch, "Freeze Time: " + (int) freezeTimeRemaining, 50, viewport.getWorldHeight() - 150);
@@ -170,13 +174,13 @@ public class PlayScreen implements Screen {
         if (comboMultiplier > 1) {
             font.draw(batch, "Combo: x" + comboMultiplier, 50, viewport.getWorldHeight() - 300);
         }
-        
+
         batch.end();
 
         if (!inputBlocked && !game.isPaused()) {
             handleTileSelection();
         }
-        
+
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             pauseGame();
             game.pauseGame();
@@ -192,7 +196,7 @@ public class PlayScreen implements Screen {
                 redComboCount = 0;
             }
         }
-        
+
         // Update power-up timers
         if (freezeTimeActive) {
             freezeTimeRemaining -= delta;
@@ -200,14 +204,14 @@ public class PlayScreen implements Screen {
                 freezeTimeActive = false;
             }
         }
-        
+
         if (comboMultiplierActive) {
             comboMultiplierRemaining -= delta;
             if (comboMultiplierRemaining <= 0) {
                 comboMultiplierActive = false;
             }
         }
-        
+
         if (instantTilesActive) {
             instantTilesRemaining -= delta;
             if (instantTilesRemaining <= 0) {
@@ -218,15 +222,23 @@ public class PlayScreen implements Screen {
 
     private void handleTileSelection() {
         if (Gdx.input.justTouched()) {
-            float touchX = Gdx.input.getX();
-            float touchY = viewport.getWorldHeight() - Gdx.input.getY();
+            // 使用 unproject 方法正确地将屏幕坐标转换为世界坐标
+            touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
+            viewport.unproject(touchPos);
 
             for (int row = 3; row >= 0; row--) {
                 for (int col = 0; col < 4; col++) {
                     Tile tile = grid[row][col];
                     if (tile != null && (tile.isFullyVisible() || instantTilesActive)) {
-                        Rectangle bounds = tile.getBounds();
-                        if (bounds.contains(touchX, touchY)) {
+                        // 创建准确的瓦片边界
+                        Rectangle bounds = new Rectangle(
+                            tile.getPosition().x,
+                            tile.getPosition().y,
+                            TILE_SIZE,
+                            TILE_SIZE
+                        );
+
+                        if (bounds.contains(touchPos.x, touchPos.y)) {
                             tile.setScale(0.9f);
 
                             if (firstSelectedTile == null) {
@@ -307,7 +319,7 @@ public class PlayScreen implements Screen {
         int col2 = tile2.getGridX();
 
         String color = tile1.getColor();
-        
+
         // Activate power-ups based on color
         if (color.equals("blue")) {
             freezeTimeActive = true;
@@ -315,7 +327,7 @@ public class PlayScreen implements Screen {
         } else if (color.equals("red")) {
             comboMultiplierActive = true;
             comboMultiplierRemaining = 7;
-            
+
             // Check for red combo
             if (allPowerUpsActive()) {
                 redMatchDuringAllPowerUps = true;
@@ -345,7 +357,7 @@ public class PlayScreen implements Screen {
 
         firstSelectedTile = null;
         secondSelectedTile = null;
-        
+
         int baseScore = calculateScore(3, color);
         score += baseScore * comboMultiplier;
     }
@@ -380,10 +392,10 @@ public class PlayScreen implements Screen {
 
         firstSelectedTile = null;
         secondSelectedTile = null;
-        
+
         int baseScore = calculateScore(newNumber, color);
         score += baseScore * comboMultiplier;
-        
+
         // Reset combo timer if not a red match during all power-ups
         if (!(color.equals("red") && allPowerUpsActive())) {
             comboTimeRemaining = 0.5f;
@@ -392,7 +404,7 @@ public class PlayScreen implements Screen {
 
     private int calculateScore(int number, String color) {
         boolean allPowerUps = allPowerUpsActive();
-        
+
         if (number == 1) {
             if (allPowerUps) return 290;
             if (comboMultiplierActive) return 100;
@@ -411,7 +423,7 @@ public class PlayScreen implements Screen {
         }
         return 0;
     }
-    
+
     private boolean allPowerUpsActive() {
         return freezeTimeActive && comboMultiplierActive && instantTilesActive;
     }
