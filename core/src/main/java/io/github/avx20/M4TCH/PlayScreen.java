@@ -9,7 +9,6 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
@@ -53,9 +52,6 @@ public class PlayScreen implements Screen {
     private float comboTimeRemaining = 0;
     private boolean redMatchDuringAllPowerUps = false;
     private int redComboCount = 0;
-
-    // 触摸位置转换用
-    private Vector3 touchPos = new Vector3();
 
     public PlayScreen(M4TCH game) {
         this.game = game;
@@ -222,23 +218,15 @@ public class PlayScreen implements Screen {
 
     private void handleTileSelection() {
         if (Gdx.input.justTouched()) {
-            // 使用 unproject 方法正确地将屏幕坐标转换为世界坐标
-            touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
-            viewport.unproject(touchPos);
+            float touchX = Gdx.input.getX();
+            float touchY = viewport.getWorldHeight() - Gdx.input.getY();
 
             for (int row = 3; row >= 0; row--) {
                 for (int col = 0; col < 4; col++) {
                     Tile tile = grid[row][col];
                     if (tile != null && (tile.isFullyVisible() || instantTilesActive)) {
-                        // 创建准确的瓦片边界
-                        Rectangle bounds = new Rectangle(
-                            tile.getPosition().x,
-                            tile.getPosition().y,
-                            TILE_SIZE,
-                            TILE_SIZE
-                        );
-
-                        if (bounds.contains(touchPos.x, touchPos.y)) {
+                        Rectangle bounds = tile.getBounds();
+                        if (bounds.contains(touchX, touchY)) {
                             tile.setScale(0.9f);
 
                             if (firstSelectedTile == null) {
