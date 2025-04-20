@@ -32,7 +32,7 @@ public class PauseMenu implements Screen {
 
     private Music bgm;
 
-    // 按钮尺寸常量（可灵活修改）
+    // Button size constants (can be flexibly modified)
     private static final float RESUME_BUTTON_WIDTH = 200f;
     private static final float RESUME_BUTTON_HEIGHT = 60f;
 
@@ -61,20 +61,20 @@ public class PauseMenu implements Screen {
         int centerY = Gdx.graphics.getHeight() / 2;
 
         float topY = centerY + (RESUME_BUTTON_HEIGHT + RESTART_BUTTON_HEIGHT + SETTINGS_BUTTON_HEIGHT + EXIT_BUTTON_HEIGHT) / 2f
-                + BUTTON_SPACING * 1.5f;
+            + BUTTON_SPACING * 1.5f;
 
         resumeBounds = new Rectangle(centerX - RESUME_BUTTON_WIDTH / 2f, topY - RESUME_BUTTON_HEIGHT, RESUME_BUTTON_WIDTH, RESUME_BUTTON_HEIGHT);
         restartBounds = new Rectangle(centerX - RESTART_BUTTON_WIDTH / 2f,
-                resumeBounds.y - RESTART_BUTTON_HEIGHT - BUTTON_SPACING,
-                RESTART_BUTTON_WIDTH, RESTART_BUTTON_HEIGHT);
+            resumeBounds.y - RESTART_BUTTON_HEIGHT - BUTTON_SPACING,
+            RESTART_BUTTON_WIDTH, RESTART_BUTTON_HEIGHT);
         settingsBounds = new Rectangle(centerX - SETTINGS_BUTTON_WIDTH / 2f,
-                restartBounds.y - SETTINGS_BUTTON_HEIGHT - BUTTON_SPACING,
-                SETTINGS_BUTTON_WIDTH, SETTINGS_BUTTON_HEIGHT);
+            restartBounds.y - SETTINGS_BUTTON_HEIGHT - BUTTON_SPACING,
+            SETTINGS_BUTTON_WIDTH, SETTINGS_BUTTON_HEIGHT);
         mainMenuBounds = new Rectangle(centerX - EXIT_BUTTON_WIDTH / 2f,
-                settingsBounds.y - EXIT_BUTTON_HEIGHT - BUTTON_SPACING,
-                EXIT_BUTTON_WIDTH, EXIT_BUTTON_HEIGHT);
+            settingsBounds.y - EXIT_BUTTON_HEIGHT - BUTTON_SPACING,
+            EXIT_BUTTON_WIDTH, EXIT_BUTTON_HEIGHT);
 
-        // 设置点击区域尺寸，确保同步
+        // Set click area sizes, ensure synchronization
         resumeBounds.setSize(RESUME_BUTTON_WIDTH, RESUME_BUTTON_HEIGHT);
         restartBounds.setSize(RESTART_BUTTON_WIDTH, RESTART_BUTTON_HEIGHT);
         settingsBounds.setSize(SETTINGS_BUTTON_WIDTH, SETTINGS_BUTTON_HEIGHT);
@@ -82,7 +82,14 @@ public class PauseMenu implements Screen {
 
         bgm = Gdx.audio.newMusic(Gdx.files.internal("bgmmusic.mp3"));
         bgm.setLooping(true);
-        bgm.setVolume(0.5f);
+
+        // Apply volume with special handling for very low values
+        float volume = M4TCH.gameVolume;
+        if (volume < 0.01f) {
+            volume = 0f;
+        }
+        bgm.setVolume(volume);
+
         bgm.play();
     }
 
@@ -93,12 +100,12 @@ public class PauseMenu implements Screen {
                 switch (clickedButton) {
                     case RESUME: game.resumeGame(); break;
                     case RESTART: game.startGame(); break;
+                    case SETTINGS: game.setScreen(new SettingsScreen(game)); break;
                     case EXIT:
                         playScreen.dispose();
                         game.setPaused(false);
                         game.setScreen(new HomeScreen(game));
                         break;
-                    case SETTINGS: break;
                 }
                 clickedButton = ButtonType.NONE;
                 clickTimer = 0f;
@@ -152,28 +159,28 @@ public class PauseMenu implements Screen {
         batch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         batch.draw(resume_button,
-                resumeBounds.x + (resumeBounds.width * (1 - resumeScale) / 2),
-                resumeBounds.y + (resumeBounds.height * (1 - resumeScale) / 2),
-                resumeBounds.width * resumeScale,
-                resumeBounds.height * resumeScale);
+            resumeBounds.x + (resumeBounds.width * (1 - resumeScale) / 2),
+            resumeBounds.y + (resumeBounds.height * (1 - resumeScale) / 2),
+            resumeBounds.width * resumeScale,
+            resumeBounds.height * resumeScale);
 
         batch.draw(restart_button,
-                restartBounds.x + (restartBounds.width * (1 - restartScale) / 2),
-                restartBounds.y + (restartBounds.height * (1 - restartScale) / 2),
-                restartBounds.width * restartScale,
-                restartBounds.height * restartScale);
+            restartBounds.x + (restartBounds.width * (1 - restartScale) / 2),
+            restartBounds.y + (restartBounds.height * (1 - restartScale) / 2),
+            restartBounds.width * restartScale,
+            restartBounds.height * restartScale);
 
         batch.draw(settings_icon,
-                settingsBounds.x + (settingsBounds.width * (1 - settingsScale) / 2),
-                settingsBounds.y + (settingsBounds.height * (1 - settingsScale) / 2),
-                settingsBounds.width * settingsScale,
-                settingsBounds.height * settingsScale);
+            settingsBounds.x + (settingsBounds.width * (1 - settingsScale) / 2),
+            settingsBounds.y + (settingsBounds.height * (1 - settingsScale) / 2),
+            settingsBounds.width * settingsScale,
+            settingsBounds.height * settingsScale);
 
         batch.draw(exit_button,
-                mainMenuBounds.x + (mainMenuBounds.width * (1 - exitScale) / 2),
-                mainMenuBounds.y + (mainMenuBounds.height * (1 - exitScale) / 2),
-                mainMenuBounds.width * exitScale,
-                mainMenuBounds.height * exitScale);
+            mainMenuBounds.x + (mainMenuBounds.width * (1 - exitScale) / 2),
+            mainMenuBounds.y + (mainMenuBounds.height * (1 - exitScale) / 2),
+            mainMenuBounds.width * exitScale,
+            mainMenuBounds.height * exitScale);
 
         batch.end();
     }
