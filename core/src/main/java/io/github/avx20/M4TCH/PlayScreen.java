@@ -38,6 +38,20 @@ public class PlayScreen implements Screen {
     private float pausedTimeRemaining;
     private int pausedScore;
     private Tile[][] pausedGrid = new Tile[4][4];
+    
+    // Power-up states
+    private boolean freezeTimeActive = false;
+    private float freezeTimeRemaining = 0;
+    private boolean comboMultiplierActive = false;
+    private float comboMultiplierRemaining = 0;
+    private boolean instantTilesActive = false;
+    private float instantTilesRemaining = 0;
+    
+    // Combo system
+    private int comboMultiplier = 1;
+    private float comboTimeRemaining = 0;
+    private boolean redMatchDuringAllPowerUps = false;
+    private int redComboCount = 0;
 
     public PlayScreen(M4TCH game) {
         this.game = game;
@@ -76,7 +90,16 @@ public class PlayScreen implements Screen {
             return;
         }
 
-        timeRemaining -= delta;
+        // Update power-up timers
+        updatePowerUpTimers(delta);
+        
+        // Update time remaining (considering freeze time power-up)
+        if (!freezeTimeActive) {
+            timeRemaining -= delta;
+        } else {
+            timeRemaining -= delta * 0.5f; // 50% slower
+        }
+        
         animationTimer += delta;
 
         if (timeRemaining <= 0) {
@@ -133,6 +156,21 @@ public class PlayScreen implements Screen {
 
         font.draw(batch, "Time: " + (int) timeRemaining, 50, viewport.getWorldHeight() - 50);
         font.draw(batch, "Score: " + score, 50, viewport.getWorldHeight() - 100);
+        
+        // Display power-up status
+        if (freezeTimeActive) {
+            font.draw(batch, "Freeze Time: " + (int) freezeTimeRemaining, 50, viewport.getWorldHeight() - 150);
+        }
+        if (comboMultiplierActive) {
+            font.draw(batch, "Combo Multiplier: " + (int) comboMultiplierRemaining, 50, viewport.getWorldHeight() - 200);
+        }
+        if (instantTilesActive) {
+            font.draw(batch, "Instant Tiles: " + (int) instantTilesRemaining, 50, viewport.getWorldHeight() - 250);
+        }
+        if (comboMultiplier > 1) {
+            font.draw(batch, "Combo: x" + comboMultiplier, 50, viewport.getWorldHeight() - 300);
+        }
+        
         batch.end();
 
         if (!inputBlocked && !game.isPaused()) {
@@ -145,6 +183,39 @@ public class PlayScreen implements Screen {
         }
     }
 
+    private void updatePowerUpTimers(float delta) {
+        // Update combo timer
+        if (comboTimeRemaining > 0) {
+            comboTimeRemaining -= delta;
+            if (comboTimeRemaining <= 0) {
+                comboMultiplier = 1;
+                redComboCount = 0;
+            }
+        }
+        
+        // Update power-up timers
+        if (freezeTimeActive) {
+            freezeTimeRemaining -= delta;
+            if (freezeTimeRemaining <= 0) {
+                freezeTimeActive = false;
+            }
+        }
+        
+        if (comboMultiplierActive) {
+            comboMultiplierRemaining -= delta;
+            if (comboMultiplierRemaining <= 0) {
+                comboMultiplierActive = false;
+            }
+        }
+        
+        if (instantTilesActive) {
+            instantTilesRemaining -= delta;
+            if (instantTilesRemaining <= 0) {
+                instantTilesActive = false;
+            }
+        }
+    }
+
     private void handleTileSelection() {
         if (Gdx.input.justTouched()) {
             float touchX = Gdx.input.getX();
@@ -153,7 +224,7 @@ public class PlayScreen implements Screen {
             for (int row = 3; row >= 0; row--) {
                 for (int col = 0; col < 4; col++) {
                     Tile tile = grid[row][col];
-                    if (tile != null && tile.isFullyVisible()) {
+                    if (tile != null && (tile.isFullyVisible() || instantTilesActive)) {
                         Rectangle bounds = tile.getBounds();
                         if (bounds.contains(touchX, touchY)) {
                             tile.setScale(0.9f);
@@ -171,37 +242,37 @@ public class PlayScreen implements Screen {
             }
         }
     }
+
     private void renderPausedState() {
-    viewport.apply();
-    SpriteBatch batch = game.getBatch();
-    batch.setProjectionMatrix(viewport.getCamera().combined);
+        viewport.apply();
+        SpriteBatch batch = game.getBatch();
+        batch.setProjectionMatrix(viewport.getCamera().combined);
 
-    batch.begin();
-    batch.draw(gameBackground, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
+        batch.begin();
+        batch.draw(gameBackground, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
 
-    for (int row = 0; row < 4; row++) {
-        for (int col = 0; col < 4; col++) {
-            Tile tile = grid[row][col];
-            if (tile != null) {
-                float scale = tile.getScale();
-                float scaledWidth = TILE_SIZE * scale;
-                float scaledHeight = TILE_SIZE * scale;
-                float offsetX = (TILE_SIZE - scaledWidth) / 2;
-                float offsetY = (TILE_SIZE - scaledHeight) / 2;
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                Tile tile = grid[row][col];
+                if (tile != null) {
+                    float scale = tile.getScale();
+                    float scaledWidth = TILE_SIZE * scale;
+                    float scaledHeight = TILE_SIZE * scale;
+                    float offsetX = (TILE_SIZE - scaledWidth) / 2;
+                    float offsetY = (TILE_SIZE - scaledHeight) / 2;
 
-                batch.draw(tile.getTexture(),
-                    tile.getPosition().x + offsetX,
-                    tile.getPosition().y + offsetY,
-                    scaledWidth, scaledHeight);
+                    batch.draw(tile.getTexture(),
+                        tile.getPosition().x + offsetX,
+                        tile.getPosition().y + offsetY,
+                        scaledWidth, scaledHeight);
+                }
             }
         }
+
+        font.draw(batch, "Time: " + (int) pausedTimeRemaining, 50, viewport.getWorldHeight() - 50);
+        font.draw(batch, "Score: " + pausedScore, 50, viewport.getWorldHeight() - 100);
+        batch.end();
     }
-
-    font.draw(batch, "Time: " + (int) pausedTimeRemaining, 50, viewport.getWorldHeight() - 50);
-    font.draw(batch, "Score: " + pausedScore, 50, viewport.getWorldHeight() - 100);
-    batch.end();
-}
-
 
     private void checkForMatch() {
         if (firstSelectedTile != null && secondSelectedTile != null) {
@@ -235,6 +306,32 @@ public class PlayScreen implements Screen {
         int row2 = tile2.getGridY();
         int col2 = tile2.getGridX();
 
+        String color = tile1.getColor();
+        
+        // Activate power-ups based on color
+        if (color.equals("blue")) {
+            freezeTimeActive = true;
+            freezeTimeRemaining = 5;
+        } else if (color.equals("red")) {
+            comboMultiplierActive = true;
+            comboMultiplierRemaining = 7;
+            
+            // Check for red combo
+            if (allPowerUpsActive()) {
+                redMatchDuringAllPowerUps = true;
+                comboTimeRemaining = 0.5f;
+                redComboCount++;
+                comboMultiplier = (int) Math.pow(2, redComboCount);
+            }
+        } else if (color.equals("green")) {
+            instantTilesActive = true;
+            if (instantTilesRemaining > 0) {
+                instantTilesRemaining += 10; // Extend duration
+            } else {
+                instantTilesRemaining = 10;
+            }
+        }
+
         String color1 = getRandomColor();
         String color2 = getRandomColor();
 
@@ -248,7 +345,9 @@ public class PlayScreen implements Screen {
 
         firstSelectedTile = null;
         secondSelectedTile = null;
-        score += calculateScore(3, tile1.getColor());
+        
+        int baseScore = calculateScore(3, color);
+        score += baseScore * comboMultiplier;
     }
 
     private void combineTiles(Tile tile1, Tile tile2) {
@@ -281,13 +380,40 @@ public class PlayScreen implements Screen {
 
         firstSelectedTile = null;
         secondSelectedTile = null;
-        score += calculateScore(newNumber, color);
+        
+        int baseScore = calculateScore(newNumber, color);
+        score += baseScore * comboMultiplier;
+        
+        // Reset combo timer if not a red match during all power-ups
+        if (!(color.equals("red") && allPowerUpsActive())) {
+            comboTimeRemaining = 0.5f;
+        }
     }
 
     private int calculateScore(int number, String color) {
-        if (number == 2) return 50;
-        if (number == 3) return 500;
+        boolean allPowerUps = allPowerUpsActive();
+        
+        if (number == 1) {
+            if (allPowerUps) return 290;
+            if (comboMultiplierActive) return 100;
+            return 50;
+        } else if (number == 2) {
+            if (allPowerUps) return 610;
+            if (comboMultiplierActive) return 300;
+            return 150;
+        } else if (number == 3) {
+            if (color.equals("red") && allPowerUps && redMatchDuringAllPowerUps) {
+                return 5000;
+            }
+            if (allPowerUps) return 2500;
+            if (comboMultiplierActive) return 1000;
+            return 500;
+        }
         return 0;
+    }
+    
+    private boolean allPowerUpsActive() {
+        return freezeTimeActive && comboMultiplierActive && instantTilesActive;
     }
 
     public void pauseGame() {

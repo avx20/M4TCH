@@ -124,7 +124,7 @@ public class PauseMenu implements Screen, M4TCH.VolumeChangeListener {
                 switch (clickedButton) {
                     case RESUME: game.resumeGame(); break;
                     case RESTART: game.startGame(); break;
-                    case SETTINGS: game.setScreen(new SettingsScreen(game)); break;
+                    case SETTINGS: game.setScreen(new SettingScreen(game)); break;
                     case EXIT:
                         playScreen.dispose();
                         game.setPaused(false);
