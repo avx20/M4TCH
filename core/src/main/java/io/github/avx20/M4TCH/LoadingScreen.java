@@ -118,23 +118,26 @@ public class LoadingScreen implements Screen {
                 FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.absolute(fontPath));
                 FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
 
-                // Configure font for loading text
+                // Configure font for loading text - CHANGED TO YELLOW
                 parameter.size = 36; // Larger font size for loading text
-                parameter.color.set(1f, 1f, 1f, 1f); // White color
+                parameter.color.set(1f, 0.9f, 0f, 1f); // Yellow color
                 loadingFont = generator.generateFont(parameter);
 
-                // Configure font for instructions text
+                // Configure font for instructions text - ALSO CHANGED TO YELLOW
                 parameter.size = 28; // Smaller font size for instructions
+                parameter.color.set(1f, 0.9f, 0f, 1f); // Yellow color
                 instructionsFont = generator.generateFont(parameter);
 
                 generator.dispose(); // Clean up the generator
             } catch (Exception e) {
                 Gdx.app.error("LoadingScreen", "Error loading custom font: " + e.getMessage(), e);
-                // Fallback to default font
+                // Fallback to default font - WITH YELLOW COLOR
                 loadingFont = new BitmapFont();
                 loadingFont.getData().setScale(2f);
+                loadingFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
                 instructionsFont = new BitmapFont();
                 instructionsFont.getData().setScale(1.5f);
+                instructionsFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
             }
 
             // Load UI Skin with flexible paths (fallback)
@@ -146,11 +149,13 @@ public class LoadingScreen implements Screen {
 
         } catch (Exception e) {
             Gdx.app.error("LoadingScreen", "Error loading loading screen assets: " + e.getMessage(), e);
-            // Fallback to default font if everything fails
+            // Fallback to default font if everything fails - WITH YELLOW COLOR
             loadingFont = new BitmapFont();
             loadingFont.getData().setScale(2f);
+            loadingFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
             instructionsFont = new BitmapFont();
             instructionsFont.getData().setScale(1.5f);
+            instructionsFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
         }
     }
 
