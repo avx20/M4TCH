@@ -391,24 +391,9 @@ public class PlayScreen implements Screen {
     }
 
     private int calculateScore(int number, String color) {
-        boolean allPowerUps = allPowerUpsActive();
-
-        if (number == 1) {
-            if (allPowerUps) return 290;
-            if (comboMultiplierActive) return 100;
-            return 50;
-        } else if (number == 2) {
-            if (allPowerUps) return 610;
-            if (comboMultiplierActive) return 300;
-            return 150;
-        } else if (number == 3) {
-            if (color.equals("red") && allPowerUps && redMatchDuringAllPowerUps) {
-                return 5000;
-            }
-            if (allPowerUps) return 2500;
-            if (comboMultiplierActive) return 1000;
-            return 500;
-        }
+        if (number == 2) return 50;
+        if (number == 3) return 150;
+        if (number == 4) return 500;    // Star match (you can adjust the score value)
         return 0;
     }
 
