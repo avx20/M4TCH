@@ -15,6 +15,9 @@ public class M4TCH extends Game {
     private HomeScreen homeScreen;
     private boolean paused = false;
 
+    // Global volume setting
+    public static float gameVolume = 0.5f;
+
     @Override
     public void create() {
         batch = new SpriteBatch();
@@ -83,5 +86,9 @@ public class M4TCH extends Game {
 
     public void setPaused(boolean paused) {
         this.paused = paused;
+    }
+
+    public PlayScreen getPlayScreen() {
+        return playScreen;
     }
 }
