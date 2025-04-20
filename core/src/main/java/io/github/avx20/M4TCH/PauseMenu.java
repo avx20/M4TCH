@@ -10,7 +10,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 
-public class PauseMenu implements Screen {
+public class PauseMenu implements Screen, M4TCH.VolumeChangeListener {
 
     private boolean isPaused = true;
     private BitmapFont font;
@@ -51,11 +51,11 @@ public class PauseMenu implements Screen {
         font = new BitmapFont();
         batch = new SpriteBatch();
 
-        background = new Texture("pausescreen_bg.png");
-        resume_button = new Texture("resume_button.png");
-        restart_button = new Texture("restart_button.png");
-        settings_icon = new Texture("settings_icon.png");
-        exit_button = new Texture("exit_button.png");
+        background = tryLoadTexture("pausescreen_bg.png");
+        resume_button = tryLoadTexture("resume_button.png");
+        restart_button = tryLoadTexture("restart_button.png");
+        settings_icon = tryLoadTexture("settings_icon.png");
+        exit_button = tryLoadTexture("exit_button.png");
 
         int centerX = Gdx.graphics.getWidth() / 2;
         int centerY = Gdx.graphics.getHeight() / 2;
@@ -80,17 +80,41 @@ public class PauseMenu implements Screen {
         settingsBounds.setSize(SETTINGS_BUTTON_WIDTH, SETTINGS_BUTTON_HEIGHT);
         mainMenuBounds.setSize(EXIT_BUTTON_WIDTH, EXIT_BUTTON_HEIGHT);
 
-        bgm = Gdx.audio.newMusic(Gdx.files.internal("bgmmusic.mp3"));
-        bgm.setLooping(true);
+        try {
+            bgm = Gdx.audio.newMusic(Gdx.files.internal("bgmmusic.mp3"));
+            bgm.setLooping(true);
 
-        // Apply volume with special handling for very low values
-        float volume = M4TCH.gameVolume;
-        if (volume < 0.01f) {
-            volume = 0f;
+            // Apply volume with special handling for very low values
+            float volume = M4TCH.gameVolume;
+            if (volume < 0.01f) {
+                volume = 0f;
+            }
+            bgm.setVolume(volume);
+
+            bgm.play();
+        } catch (Exception e) {
+            Gdx.app.error("PauseMenu", "Error loading background music", e);
         }
-        bgm.setVolume(volume);
 
-        bgm.play();
+        Gdx.app.log("PauseMenu", "Pause menu initialized with volume: " + M4TCH.gameVolume);
+    }
+
+    // Try loading texture from multiple possible locations
+    private Texture tryLoadTexture(String filename) {
+        try {
+            return new Texture(Gdx.files.internal(filename));
+        } catch (Exception e1) {
+            try {
+                return new Texture(Gdx.files.internal("assets/" + filename));
+            } catch (Exception e2) {
+                try {
+                    return new Texture(Gdx.files.internal("core/assets/" + filename));
+                } catch (Exception e3) {
+                    Gdx.app.log("PauseMenu", "Could not load texture: " + filename);
+                    return null;
+                }
+            }
+        }
     }
 
     private void update(float delta) {
@@ -122,6 +146,9 @@ public class PauseMenu implements Screen {
             int x = Gdx.input.getX();
             int y = Gdx.graphics.getHeight() - Gdx.input.getY();
 
+            // Debug touch position
+            Gdx.app.debug("PauseMenu", "Touch at: " + x + "," + y);
+
             if (resumeBounds.contains(x, y)) {
                 clickedButton = ButtonType.RESUME;
                 resumeScale = SCALE_DOWN;
@@ -131,6 +158,7 @@ public class PauseMenu implements Screen {
             } else if (settingsBounds.contains(x, y)) {
                 clickedButton = ButtonType.SETTINGS;
                 settingsScale = SCALE_DOWN;
+                Gdx.app.log("PauseMenu", "Settings button clicked");
             } else if (mainMenuBounds.contains(x, y)) {
                 clickedButton = ButtonType.EXIT;
                 exitScale = SCALE_DOWN;
@@ -145,10 +173,30 @@ public class PauseMenu implements Screen {
         exitScale += (1f - exitScale) * SCALE_SPEED * delta;
     }
 
+    // Update music volume based on global setting
+    private void updateMusicVolume() {
+        if (bgm != null) {
+            float volume = M4TCH.gameVolume;
+            if (volume < 0.01f) {
+                volume = 0f;
+            }
+            bgm.setVolume(volume);
+        }
+    }
+
+    @Override
+    public void onVolumeChanged(float newVolume) {
+        if (bgm != null) {
+            if (newVolume < 0.01f) newVolume = 0f;
+            bgm.setVolume(newVolume);
+        }
+    }
+
     @Override
     public void render(float delta) {
         update(delta);
         smoothScale(delta);
+        updateMusicVolume();
 
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -187,14 +235,18 @@ public class PauseMenu implements Screen {
 
     @Override
     public void dispose() {
-        font.dispose();
-        batch.dispose();
-        background.dispose();
-        resume_button.dispose();
-        restart_button.dispose();
-        settings_icon.dispose();
-        exit_button.dispose();
-        bgm.dispose();
+        try {
+            font.dispose();
+            batch.dispose();
+            if (background != null) background.dispose();
+            if (resume_button != null) resume_button.dispose();
+            if (restart_button != null) restart_button.dispose();
+            if (settings_icon != null) settings_icon.dispose();
+            if (exit_button != null) exit_button.dispose();
+            if (bgm != null) bgm.dispose();
+        } catch (Exception e) {
+            Gdx.app.error("PauseMenu", "Error disposing resources", e);
+        }
     }
 
     @Override public void show() {}
