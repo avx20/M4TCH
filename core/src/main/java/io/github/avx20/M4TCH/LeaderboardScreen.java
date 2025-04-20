@@ -21,6 +21,7 @@ import com.badlogic.gdx.files.FileHandle;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Random;
 
 public class LeaderboardScreen implements Screen {
     private final M4TCH game;
@@ -33,12 +34,30 @@ public class LeaderboardScreen implements Screen {
     private BitmapFont noScoresFont;
     private Array<LeaderboardEntry> leaderboardEntries;
     private GlyphLayout layout;
+    private Random random;
+
+    // Maximum length for player names to display
+    private static final int MAX_NAME_LENGTH = 10;
+
+    // Arrays for generating random player names (shortened versions)
+    private static final String[] NAME_PREFIXES = {
+        "Pro", "Max", "Top", "Ace", "Star", "Boss", "MVP", "Cool", "Fast", "Epic"
+    };
+
+    private static final String[] NAME_SUFFIXES = {
+        "X", "Pro", "Ace", "Kid", "Guy", "One", "King", "Hero", "Z", "Plus"
+    };
+
+    private static final String[] ANIMAL_NAMES = {
+        "Fox", "Wolf", "Cat", "Bear", "Lion", "Hawk", "Fish", "Duck", "Snake", "Frog"
+    };
 
     // File to store leaderboard data - simplified path
     private static final String LEADERBOARD_FILE = "leaderboard.json";
 
     public LeaderboardScreen(M4TCH game) {
         this.game = game;
+        this.random = new Random();
 
         // Initialize
         batch = new SpriteBatch();
@@ -105,17 +124,59 @@ public class LeaderboardScreen implements Screen {
         leaderboardEntries = loadLeaderboardEntries();
     }
 
-    // Method to add a new score to leaderboard
+    // Method to generate a shorter random player name
+    private String generateRandomPlayerName() {
+        int nameType = random.nextInt(3); // 0, 1, or 2 for different name patterns
+        String name;
+
+        switch (nameType) {
+            case 0: // Prefix + Suffix (e.g., "ProX")
+                name = NAME_PREFIXES[random.nextInt(NAME_PREFIXES.length)] +
+                    NAME_SUFFIXES[random.nextInt(NAME_SUFFIXES.length)];
+                break;
+
+            case 1: // Animal only (e.g., "Wolf")
+                name = ANIMAL_NAMES[random.nextInt(ANIMAL_NAMES.length)];
+                break;
+
+            case 2: // Short number-based (e.g., "Player42")
+                name = "P" + (random.nextInt(99) + 1);
+                break;
+
+            default:
+                name = "P" + random.nextInt(100); // Fallback with number
+                break;
+        }
+
+        // Ensure name doesn't exceed max length
+        if (name.length() > MAX_NAME_LENGTH) {
+            name = name.substring(0, MAX_NAME_LENGTH);
+        }
+
+        return name;
+    }
+
+    // Method to add a new score to leaderboard with a randomly generated player name
     public void addScore(int score) {
+        // Generate random player name
+        String playerName = generateRandomPlayerName();
+
         // Get current timestamp
         String timestamp = getCurrentTimestamp();
-        leaderboardEntries.add(new LeaderboardEntry("Player", score, timestamp));
+
+        // Add entry with random name
+        leaderboardEntries.add(new LeaderboardEntry(playerName, score, timestamp));
         sortAndTrimLeaderboard();
         saveLeaderboardEntries();
     }
 
-    // Method to add a new score with player name
+    // Method to add a new score with specified player name (kept for compatibility)
     public void addScore(String playerName, int score) {
+        // Ensure name doesn't exceed max length
+        if (playerName.length() > MAX_NAME_LENGTH) {
+            playerName = playerName.substring(0, MAX_NAME_LENGTH);
+        }
+
         // Get current timestamp
         String timestamp = getCurrentTimestamp();
         leaderboardEntries.add(new LeaderboardEntry(playerName, score, timestamp));
@@ -148,8 +209,14 @@ public class LeaderboardScreen implements Screen {
                 JsonValue base = jsonReader.parse(fileHandle);
 
                 for (JsonValue entry = base.child; entry != null; entry = entry.next) {
+                    String name = entry.getString("name");
+                    // Ensure loaded names also respect max length
+                    if (name.length() > MAX_NAME_LENGTH) {
+                        name = name.substring(0, MAX_NAME_LENGTH);
+                    }
+
                     entries.add(new LeaderboardEntry(
-                        entry.getString("name"),
+                        name,
                         entry.getInt("score"),
                         entry.getString("timestamp", "N/A")  // Default to "N/A" if timestamp is missing
                     ));
@@ -228,11 +295,13 @@ public class LeaderboardScreen implements Screen {
             titleY
         );
 
-        // Draw column headers with proper spacing
+        // Draw column headers with improved spacing
         float headersY = titleY - 100; // More spacing between title and headers
-        float nameX = viewport.getWorldWidth() / 2 - 350;
-        float timeX = viewport.getWorldWidth() / 2;  // Centered time column
-        float scoreX = viewport.getWorldWidth() / 2 + 350; // Increased space between time and score
+
+        // Move name column more to the left
+        float nameX = viewport.getWorldWidth() / 2 - 450; // Moved further left from -350
+        float timeX = viewport.getWorldWidth() / 2 + 100;  // Moved right from center
+        float scoreX = viewport.getWorldWidth() / 2 + 350; // Keep same position
 
         noScoresFont.setColor(Color.WHITE);
         noScoresFont.draw(batch, "PLAYER", nameX, headersY);
