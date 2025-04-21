@@ -24,7 +24,7 @@ public class PlayScreen implements Screen {
 
     private Tile[][] grid = new Tile[4][4];
     private final float TILE_SIZE = 200;
-    private final float TILE_SPACING = 10;
+    private final float TILE_SPACING = 5;
 
     private Tile firstSelectedTile = null;
     private Tile secondSelectedTile = null;
@@ -97,7 +97,7 @@ public class PlayScreen implements Screen {
         if (!freezeTimeActive) {
             timeRemaining -= delta;
         } else {
-            timeRemaining -= delta * 0.5f; // 50% slower
+            timeRemaining -= delta * 0.25f; // 75% slower
         }
 
         animationTimer += delta;
@@ -352,23 +352,24 @@ public class PlayScreen implements Screen {
 
     private void combineTiles(Tile tile1, Tile tile2) {
         matchSuccessSound.play();
-        int newNumber = tile1.getNumber() + 1;
+        int originalNumber = tile1.getNumber(); // Store the original number for scoring
+        int newNumber = originalNumber + 1;
         String color = tile1.getColor();
         Texture newTexture;
-
+    
         if (tile1.getNumber() == 2 && tile2.getNumber() == 2) {
             newNumber = 3;
             newTexture = new Texture(color + "_tile_star.png");
         } else {
             newTexture = new Texture(color + "_tile_" + newNumber + ".png");
         }
-
+    
         int secondRow = tile2.getGridY();
         int secondCol = tile2.getGridX();
         grid[secondRow][secondCol] = new Tile(newNumber, color, newTexture,
             tile2.getPosition(), secondCol, secondRow);
         grid[secondRow][secondCol].setAppearTime(animationTimer);
-
+    
         int firstRow = tile1.getGridY();
         int firstCol = tile1.getGridX();
         String newColor = getRandomColor();
@@ -377,13 +378,14 @@ public class PlayScreen implements Screen {
             tile1.getPosition(), firstCol, firstRow);
         grid[firstRow][firstCol].setAppearTime(animationTimer);
         grid[firstRow][firstCol].setSpeedMultiplier(0.2f);
-
+    
         firstSelectedTile = null;
         secondSelectedTile = null;
-
-        int baseScore = calculateScore(newNumber, color);
+    
+        // Calculate score based on the original number before combination
+        int baseScore = calculateScore(originalNumber, color);
         score += baseScore * comboMultiplier;
-
+    
         // Reset combo timer if not a red match during all power-ups
         if (!(color.equals("red") && allPowerUpsActive())) {
             comboTimeRemaining = 0.5f;
@@ -391,9 +393,29 @@ public class PlayScreen implements Screen {
     }
 
     private int calculateScore(int number, String color) {
-        if (number == 2) return 50;
-        if (number == 3) return 150;
-        if (number == 4) return 500;    // Star match (you can adjust the score value)
+        boolean allPowerUpsActive = allPowerUpsActive();
+        boolean cmActive = comboMultiplierActive;
+    
+        if (number == 1) { // Base tiles (number one tiles)
+            if (allPowerUpsActive) return 290;
+            if (cmActive) return 100;
+            return 50;
+        } 
+        else if (number == 2) { // Intermediate tiles (number two tiles)
+            if (allPowerUpsActive) return 610;
+            if (cmActive) return 300;
+            return 150;
+        } 
+        else if (number == 3) { // Star tiles
+            // Special case for red star tiles when all power-ups are active
+            if (color.equals("red") && allPowerUpsActive && redMatchDuringAllPowerUps) {
+                return 5000;
+            }
+            // Normal star tile cases
+            if (allPowerUpsActive) return 2500;
+            if (cmActive) return 1000;
+            return 500;
+        }
         return 0;
     }
 
