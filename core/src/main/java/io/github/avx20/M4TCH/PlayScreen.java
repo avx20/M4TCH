@@ -4,15 +4,19 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class PlayScreen implements Screen {
+    private BitmapFont entryFont;  // The medium font you want to use
+    private FreeTypeFontGenerator fontGenerator;
     private final M4TCH game;
     private Texture gameBackground;
     private BitmapFont font;
@@ -54,14 +58,29 @@ public class PlayScreen implements Screen {
     private int redComboCount = 0;
 
     public PlayScreen(M4TCH game) {
-        this.game = game;
-        this.viewport = new FitViewport(1920, 1080);
-        this.gameBackground = new Texture("game_bg.png");
-        this.font = new BitmapFont();
-        initializeGrid();
-        matchSuccessSound = Gdx.audio.newSound(Gdx.files.internal("match_success.mp3"));
-        matchFailSound = Gdx.audio.newSound(Gdx.files.internal("match_fail.mp3"));
+    this.game = game;
+    this.viewport = new FitViewport(1920, 1080);
+    this.gameBackground = new Texture("game_bg.png");
+    
+    // Initialize the font generator
+    try {
+        fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("font.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter entryParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        entryParams.size = 36;  // Same size as in LeaderboardScreen
+        entryParams.color = Color.WHITE;  // Or whatever color you prefer
+        entryFont = fontGenerator.generateFont(entryParams);
+        entryFont.getData().setScale(1.2f);  // Same scale as in LeaderboardScreen
+    } catch (Exception e) {
+        Gdx.app.error("PlayScreen", "Error loading custom font, using default", e);
+        entryFont = new BitmapFont();
+        entryFont.getData().setScale(1.2f);
+        entryFont.setColor(Color.WHITE);
     }
+    
+    initializeGrid();
+    matchSuccessSound = Gdx.audio.newSound(Gdx.files.internal("match_success.mp3"));
+    matchFailSound = Gdx.audio.newSound(Gdx.files.internal("match_fail.mp3"));
+}
 
     private void initializeGrid() {
         for (int row = 0; row < 4; row++) {
@@ -154,23 +173,22 @@ public class PlayScreen implements Screen {
             }
         }
 
-        font.draw(batch, "Time: " + (int) timeRemaining, 50, viewport.getWorldHeight() - 50);
-        font.draw(batch, "Score: " + score, 50, viewport.getWorldHeight() - 100);
+        entryFont.draw(batch, "Time: " + (int) timeRemaining, 50, viewport.getWorldHeight() - 50);
+        entryFont.draw(batch, "Score: " + score, 50, viewport.getWorldHeight() - 100);
 
-        // Display power-up status
+
         if (freezeTimeActive) {
-            font.draw(batch, "Freeze Time: " + (int) freezeTimeRemaining, 50, viewport.getWorldHeight() - 150);
+            entryFont.draw(batch, "Freeze Time: " + (int) freezeTimeRemaining, 50, viewport.getWorldHeight() - 150);
         }
         if (comboMultiplierActive) {
-            font.draw(batch, "Combo Multiplier: " + (int) comboMultiplierRemaining, 50, viewport.getWorldHeight() - 200);
+            entryFont.draw(batch, "Combo Multiplier: " + (int) comboMultiplierRemaining, 50, viewport.getWorldHeight() - 200);
         }
         if (instantTilesActive) {
-            font.draw(batch, "Instant Tiles: " + (int) instantTilesRemaining, 50, viewport.getWorldHeight() - 250);
+            entryFont.draw(batch, "Instant Tiles: " + (int) instantTilesRemaining, 50, viewport.getWorldHeight() - 250);
         }
         if (comboMultiplier > 1) {
-            font.draw(batch, "Combo: x" + comboMultiplier, 50, viewport.getWorldHeight() - 300);
+            entryFont.draw(batch, "Combo: x" + comboMultiplier, 50, viewport.getWorldHeight() - 300);
         }
-
         batch.end();
 
         if (!inputBlocked && !game.isPaused()) {
@@ -477,7 +495,10 @@ public class PlayScreen implements Screen {
         matchSuccessSound.dispose();
         matchFailSound.dispose();
         gameBackground.dispose();
-        font.dispose();
+        entryFont.dispose();  // Dispose the custom font
+        if (fontGenerator != null) {
+            fontGenerator.dispose();  // Dispose the font generator
+        }
         for (int row = 0; row < 4; row++) {
             for (int col = 0; col < 4; col++) {
                 if (grid[row][col] != null) {
