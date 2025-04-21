@@ -173,8 +173,8 @@ public class PlayScreen implements Screen {
             }
         }
 
-        entryFont.draw(batch, "Time: " + (int) timeRemaining, 50, viewport.getWorldHeight() - 50);
-        entryFont.draw(batch, "Score: " + score, 50, viewport.getWorldHeight() - 100);
+        entryFont.draw(batch, "Time left: " + (int) timeRemaining, 570, viewport.getWorldHeight() - 50);
+        entryFont.draw(batch, "Score: " + score, 1060, viewport.getWorldHeight() - 50);
 
 
         if (freezeTimeActive) {

@@ -85,11 +85,7 @@ public class LoadingScreen implements Screen {
                 Gdx.app.error("LoadingScreen", "Failed to load background texture");
             }
 
-            loadingFrameTexture = loadTextureWithFallbacks("loading_frame.png", assetsPath);
-            loadingBarTexture = loadTextureWithFallbacks("loading_bar.png", assetsPath);
-
-            // Try to load instructions image if available
-            instructionsImageTexture = loadTextureWithFallbacks("instructions.png", assetsPath);
+            
 
             // Load the custom font.ttf file
             try {
