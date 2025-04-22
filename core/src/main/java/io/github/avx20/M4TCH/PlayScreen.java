@@ -264,7 +264,7 @@ public class PlayScreen implements Screen {
                     if (tile != null && (tile.isFullyVisible() || instantTilesActive)) {
                         Rectangle bounds = tile.getBounds();
                         if (bounds.contains(touchX, touchY)) {
-                            tile.setScale(0.9f);
+                            tile.setScale(0.85f);
 
                             if (firstSelectedTile == null) {
                                 firstSelectedTile = tile;
@@ -348,10 +348,27 @@ public class PlayScreen implements Screen {
         // Activate power-ups based on color
         if (color.equals("blue")) {
             freezeTimeActive = true;
-            freezeTimeRemaining = 5;
+
+            if (instantTilesRemaining > 0) {
+                
+                freezeTimeRemaining += 5; // Extend duration
+            } else {
+                freezeTimeRemaining = 5;
+            }
+            
+            
+
+            
         } else if (color.equals("red")) {
             comboMultiplierActive = true;
-            comboMultiplierRemaining = 7;
+            
+
+            if (comboMultiplierRemaining > 0) {
+                
+                comboMultiplierRemaining += 7; // Extend duration
+            } else {
+                comboMultiplierRemaining = 7;
+            }
 
             // Check for red combo
             if (allPowerUpsActive()) {
@@ -361,8 +378,12 @@ public class PlayScreen implements Screen {
                 comboMultiplier = (int) Math.pow(2, redComboCount);
             }
         } else if (color.equals("green")) {
+            
             instantTilesActive = true;
+            
+            
             if (instantTilesRemaining > 0) {
+                
                 instantTilesRemaining += 10; // Extend duration
             } else {
                 instantTilesRemaining = 10;
