@@ -52,6 +52,7 @@ public class PlayScreen implements Screen {
     private float comboMultiplierRemaining = 0;
     private boolean instantTilesActive = false;
     private float instantTilesRemaining = 0;
+    private boolean disposed = false;
 
     // Combo system
     private int comboMultiplier = 1;
@@ -479,7 +480,6 @@ public class PlayScreen implements Screen {
         // Ensure font color is yellow after resume
         entryFont.setColor(Color.YELLOW);
     }
-    
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
@@ -489,7 +489,11 @@ public class PlayScreen implements Screen {
     public void show() {}
 
     @Override
-    public void hide() {}
+    public void hide() {
+        // Ensure resources are cleaned up when screen is hidden
+        dispose();
+    }
+
 
     @Override
     public void pause() {}
@@ -499,19 +503,67 @@ public class PlayScreen implements Screen {
 
     @Override
     public void dispose() {
-        matchSuccessSound.dispose();
-        matchFailSound.dispose();
-        gameBackground.dispose();
-        entryFont.dispose();  // Dispose the custom font
-        if (fontGenerator != null) {
-            fontGenerator.dispose();  // Dispose the font generator
+        if (disposed) return;
+        disposed = true;
+
+        Gdx.app.log("PlayScreen", "Disposing resources...");
+
+        // Dispose sounds
+        try {
+            if (matchSuccessSound != null) {
+                matchSuccessSound.dispose();
+            }
+        } catch (Exception e) {
+            Gdx.app.error("PlayScreen", "Error disposing matchSuccessSound", e);
         }
+
+        try {
+            if (matchFailSound != null) {
+                matchFailSound.dispose();
+            }
+        } catch (Exception e) {
+            Gdx.app.error("PlayScreen", "Error disposing matchFailSound", e);
+        }
+
+        // Dispose background
+        try {
+            if (gameBackground != null) {
+                gameBackground.dispose();
+            }
+        } catch (Exception e) {
+            Gdx.app.error("PlayScreen", "Error disposing gameBackground", e);
+        }
+
+        // Dispose grid textures
         for (int row = 0; row < 4; row++) {
             for (int col = 0; col < 4; col++) {
-                if (grid[row][col] != null) {
-                    grid[row][col].getTexture().dispose();
+                try {
+                    if (grid[row][col] != null && grid[row][col].getTexture() != null) {
+                        grid[row][col].getTexture().dispose();
+                    }
+                } catch (Exception e) {
+                    Gdx.app.error("PlayScreen", "Error disposing tile texture at " + row + "," + col, e);
                 }
             }
         }
+
+        // Dispose fonts last
+        try {
+            if (entryFont != null) {
+                entryFont.dispose();
+            }
+        } catch (Exception e) {
+            Gdx.app.error("PlayScreen", "Error disposing entryFont", e);
+        }
+
+        try {
+            if (fontGenerator != null) {
+                fontGenerator.dispose();
+            }
+        } catch (Exception e) {
+            Gdx.app.error("PlayScreen", "Error disposing fontGenerator", e);
+        }
+
+        Gdx.app.log("PlayScreen", "Resources disposed successfully");
     }
 }
