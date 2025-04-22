@@ -55,6 +55,9 @@ public class LeaderboardScreen implements Screen {
     // File to store leaderboard data - simplified path
     private static final String LEADERBOARD_FILE = "leaderboard.json";
 
+    // 标记每次会话是否为第一次加载排行榜
+    private static boolean isFirstLoad = true;
+
     public LeaderboardScreen(M4TCH game) {
         this.game = game;
         this.random = new Random();
@@ -120,7 +123,7 @@ public class LeaderboardScreen implements Screen {
             Gdx.app.log("LeaderboardScreen", "Using default font as fallback");
         }
 
-        // Load leaderboard entries
+        // Load leaderboard entries - 现在使用修改后的加载方法
         leaderboardEntries = loadLeaderboardEntries();
     }
 
@@ -202,6 +205,27 @@ public class LeaderboardScreen implements Screen {
 
     private Array<LeaderboardEntry> loadLeaderboardEntries() {
         Array<LeaderboardEntry> entries = new Array<>();
+
+        // 如果是第一次加载，或者强制清除现有排行榜
+        if (isFirstLoad) {
+            Gdx.app.log("LeaderboardScreen", "First application run - creating new leaderboard");
+            // 删除现有的排行榜文件（如果存在）
+            FileHandle fileHandle = Gdx.files.local(LEADERBOARD_FILE);
+            if (fileHandle.exists()) {
+                fileHandle.delete();
+                Gdx.app.log("LeaderboardScreen", "Deleted existing leaderboard file");
+            }
+
+            // 创建一个新的空排行榜
+            saveEmptyLeaderboard();
+
+            // 更新标志，表示第一次加载已完成
+            isFirstLoad = false;
+
+            return entries;
+        }
+
+        // 正常加载逻辑（与第一次加载后的后续操作）
         try {
             FileHandle fileHandle = Gdx.files.local(LEADERBOARD_FILE);
             if (fileHandle.exists()) {
@@ -230,6 +254,19 @@ public class LeaderboardScreen implements Screen {
             Gdx.app.error("LeaderboardScreen", "Error loading leaderboard", e);
         }
         return entries;
+    }
+
+    // 保存空排行榜的辅助方法
+    private void saveEmptyLeaderboard() {
+        try {
+            FileHandle fileHandle = Gdx.files.local(LEADERBOARD_FILE);
+            Json json = new Json();
+            json.setOutputType(JsonWriter.OutputType.json);
+            fileHandle.writeString(json.toJson(new Array<LeaderboardEntry>()), false);
+            Gdx.app.log("LeaderboardScreen", "Empty leaderboard created successfully");
+        } catch (Exception e) {
+            Gdx.app.error("LeaderboardScreen", "Error creating empty leaderboard", e);
+        }
     }
 
     private void saveLeaderboardEntries() {
@@ -424,9 +461,16 @@ public class LeaderboardScreen implements Screen {
         }
     }
 
+    // 重置静态变量的方法，用于新的游戏会话
+    public static void resetFirstLoadFlag() {
+        isFirstLoad = true;
+    }
+
     // Placeholder methods for Screen interface
     @Override public void show() {}
     @Override public void hide() {}
     @Override public void pause() {}
     @Override public void resume() {}
 }
+
+
