@@ -60,6 +60,10 @@ public class PlayScreen implements Screen {
     private boolean redMatchDuringAllPowerUps = false;
     private int redComboCount = 0;
 
+    // Tile appearance speed settings
+    private final float NORMAL_TILE_SPEED_MULTIPLIER = 0.2f;
+    private final float INSTANT_TILE_SPEED_MULTIPLIER = 2.0f; // 10x faster (0.2 * 10 = 2.0)
+
     public PlayScreen(M4TCH game) {
         this.game = game;
         this.viewport = new FitViewport(1920, 1080);
@@ -233,6 +237,18 @@ public class PlayScreen implements Screen {
             instantTilesRemaining -= delta;
             if (instantTilesRemaining <= 0) {
                 instantTilesActive = false;
+                // When instant tiles effect expires, set all existing tiles to normal speed
+                updateAllTilesSpeed(NORMAL_TILE_SPEED_MULTIPLIER);
+            }
+        }
+    }
+
+    private void updateAllTilesSpeed(float speedMultiplier) {
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                if (grid[row][col] != null) {
+                    grid[row][col].setSpeedMultiplier(speedMultiplier);
+                }
             }
         }
     }
@@ -351,6 +367,8 @@ public class PlayScreen implements Screen {
             } else {
                 instantTilesRemaining = 10;
             }
+            // Apply instant tiles effect to all tiles
+            updateAllTilesSpeed(INSTANT_TILE_SPEED_MULTIPLIER);
         }
 
         String color1 = getRandomColor();
@@ -359,12 +377,15 @@ public class PlayScreen implements Screen {
         grid[row1][col1] = new Tile(1, color1, new Texture(color1 + "_tile_one.png"),
             tile1.getPosition(), col1, row1);
         grid[row1][col1].setAppearTime(animationTimer);
+        
+        // Set appropriate speed based on whether instant tiles is active
+        float speedMultiplier = instantTilesActive ? INSTANT_TILE_SPEED_MULTIPLIER : NORMAL_TILE_SPEED_MULTIPLIER;
+        grid[row1][col1].setSpeedMultiplier(speedMultiplier);
 
         grid[row2][col2] = new Tile(1, color2, new Texture(color2 + "_tile_one.png"),
             tile2.getPosition(), col2, row2);
         grid[row2][col2].setAppearTime(animationTimer);
-
-        
+        grid[row2][col2].setSpeedMultiplier(speedMultiplier);
 
         firstSelectedTile = null;
         secondSelectedTile = null;
@@ -400,7 +421,10 @@ public class PlayScreen implements Screen {
         grid[firstRow][firstCol] = new Tile(1, newColor, firstTexture,
             tile1.getPosition(), firstCol, firstRow);
         grid[firstRow][firstCol].setAppearTime(animationTimer);
-        grid[firstRow][firstCol].setSpeedMultiplier(0.2f);
+        
+        // Set appropriate speed based on whether instant tiles is active
+        float speedMultiplier = instantTilesActive ? INSTANT_TILE_SPEED_MULTIPLIER : NORMAL_TILE_SPEED_MULTIPLIER;
+        grid[firstRow][firstCol].setSpeedMultiplier(speedMultiplier);
     
         firstSelectedTile = null;
         secondSelectedTile = null;
