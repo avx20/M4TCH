@@ -24,9 +24,9 @@ public class LoadingScreen implements Screen {
     private Texture backgroundTexture;
     private Texture loadingFrameTexture;
     private Texture loadingBarTexture;
-    private Texture instructionsImageTexture; // Optional: Image to show game instructions
+    private Texture instructionsImageTexture; // Image with game instructions
     private BitmapFont loadingFont;
-    private BitmapFont instructionsFont; // Font for instructions text
+    private BitmapFont titleFont; // Font for the title
     private Skin uiSkin;
     private GlyphLayout glyphLayout;
 
@@ -36,21 +36,6 @@ public class LoadingScreen implements Screen {
     private float loadingTime = 0f;
     private static final float LOADING_DURATION = 10f; // Extended loading time to 10 seconds (from 5s)
     private Screen nextScreen;
-
-    // Instructions text
-    private String[] instructionsText = {
-        "How to Play:",
-        "1. Match identical numbered tiles of the same color",
-        "2. Combine 1+1 of same color → 2",
-        "3. Combine 2+2 of same color → star",
-        "4. Match special tiles to activate power-ups",
-        "5. Score points before time runs out!",
-        "",
-        "Power-ups:",
-        "• Blue stars: Freeze Time - slows the timer",
-        "• Red stars: Combo Multiplier - doubles score",
-        "• Green stars: Instant Tiles - makes all tiles visible"
-    };
 
     // Loading stages
     private String[] loadingStages = {
@@ -85,7 +70,17 @@ public class LoadingScreen implements Screen {
                 Gdx.app.error("LoadingScreen", "Failed to load background texture");
             }
 
-            
+            // Load the tutorial image
+            instructionsImageTexture = loadTextureWithFallbacks("loading.png", assetsPath);
+            if (instructionsImageTexture != null) {
+                Gdx.app.log("LoadingScreen", "Successfully loaded tutorial image");
+            } else {
+                Gdx.app.error("LoadingScreen", "Failed to load tutorial image");
+            }
+
+            // Load loading bar textures
+            loadingBarTexture = loadTextureWithFallbacks("loading_bar.png", assetsPath);
+            loadingFrameTexture = loadTextureWithFallbacks("loading_frame.png", assetsPath);
 
             // Load the custom font.ttf file
             try {
@@ -114,15 +109,15 @@ public class LoadingScreen implements Screen {
                 FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.absolute(fontPath));
                 FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
 
-                // Configure font for loading text - CHANGED TO YELLOW
+                // Configure font for loading text - YELLOW
                 parameter.size = 36; // Larger font size for loading text
                 parameter.color.set(1f, 0.9f, 0f, 1f); // Yellow color
                 loadingFont = generator.generateFont(parameter);
 
-                // Configure font for instructions text - ALSO CHANGED TO YELLOW
-                parameter.size = 28; // Smaller font size for instructions
+                // Configure font for title text - YELLOW
+                parameter.size = 48; // Larger font size for title
                 parameter.color.set(1f, 0.9f, 0f, 1f); // Yellow color
-                instructionsFont = generator.generateFont(parameter);
+                titleFont = generator.generateFont(parameter);
 
                 generator.dispose(); // Clean up the generator
             } catch (Exception e) {
@@ -131,9 +126,9 @@ public class LoadingScreen implements Screen {
                 loadingFont = new BitmapFont();
                 loadingFont.getData().setScale(2f);
                 loadingFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
-                instructionsFont = new BitmapFont();
-                instructionsFont.getData().setScale(1.5f);
-                instructionsFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
+                titleFont = new BitmapFont();
+                titleFont.getData().setScale(3f);
+                titleFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
             }
 
             // Load UI Skin with flexible paths (fallback)
@@ -149,9 +144,9 @@ public class LoadingScreen implements Screen {
             loadingFont = new BitmapFont();
             loadingFont.getData().setScale(2f);
             loadingFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
-            instructionsFont = new BitmapFont();
-            instructionsFont.getData().setScale(1.5f);
-            instructionsFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
+            titleFont = new BitmapFont();
+            titleFont.getData().setScale(3f);
+            titleFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
         }
     }
 
@@ -258,8 +253,8 @@ public class LoadingScreen implements Screen {
         // Draw loading stage text
         drawLoadingStage();
 
-        // Draw instructions on how to play
-        drawInstructions();
+        // Draw instructions image
+        drawInstructionsImage();
 
         batch.end();
 
@@ -347,46 +342,49 @@ public class LoadingScreen implements Screen {
         );
     }
 
-    private void drawInstructions() {
-        if (instructionsFont == null) return;
+    private void drawInstructionsImage() {
+        if (instructionsImageTexture == null) return;
 
         float centerX = viewport.getWorldWidth() / 2f;
-        float startY = viewport.getWorldHeight() * 0.75f; // Instructions in upper portion of screen
+        float topY = viewport.getWorldHeight() * 0.8f; // Higher position for the title
 
         // Draw title with larger font
-        if (loadingFont != null) {
-            glyphLayout.setText(loadingFont, "HOW TO PLAY");
-            loadingFont.draw(batch,
-                "HOW TO PLAY",
+        if (titleFont != null) {
+            glyphLayout.setText(titleFont, "M4TCH Game Tutorial");
+            titleFont.draw(batch,
+                "M4TCH Game Tutorial",
                 centerX - glyphLayout.width / 2f,
-                startY + 60f
+                topY
             );
         }
 
-        // Draw instruction image if available
-        if (instructionsImageTexture != null) {
-            float imgWidth = Math.min(600f, viewport.getWorldWidth() * 0.5f);
-            float imgHeight = imgWidth * 0.75f; // Assuming 4:3 aspect ratio
-            batch.draw(instructionsImageTexture,
-                centerX - imgWidth / 2f,
-                startY - 80f - imgHeight,
-                imgWidth, imgHeight
-            );
+        // Calculate image dimensions - maintain aspect ratio and fit in the available space
+        float maxWidth = viewport.getWorldWidth() * 0.7f;
+        float maxHeight = viewport.getWorldHeight() * 0.5f;
+
+        float originalWidth = instructionsImageTexture.getWidth();
+        float originalHeight = instructionsImageTexture.getHeight();
+
+        float aspectRatio = originalWidth / originalHeight;
+
+        float imgWidth, imgHeight;
+
+        if (maxWidth / aspectRatio > maxHeight) {
+            // Height limited
+            imgHeight = maxHeight;
+            imgWidth = imgHeight * aspectRatio;
         } else {
-            // Draw text instructions if no image
-            float lineHeight = 40f;
-            float textY = startY;
-
-            for (String line : instructionsText) {
-                glyphLayout.setText(instructionsFont, line);
-                instructionsFont.draw(batch,
-                    line,
-                    centerX - glyphLayout.width / 2f,
-                    textY
-                );
-                textY -= lineHeight;
-            }
+            // Width limited
+            imgWidth = maxWidth;
+            imgHeight = imgWidth / aspectRatio;
         }
+
+        // Draw the image in the upper area
+        batch.draw(instructionsImageTexture,
+            centerX - imgWidth / 2f,
+            topY - 50f - imgHeight,
+            imgWidth, imgHeight
+        );
     }
 
     @Override
@@ -404,7 +402,7 @@ public class LoadingScreen implements Screen {
         if (loadingBarTexture != null) loadingBarTexture.dispose();
         if (instructionsImageTexture != null) instructionsImageTexture.dispose();
         if (loadingFont != null) loadingFont.dispose();
-        if (instructionsFont != null) instructionsFont.dispose();
+        if (titleFont != null) titleFont.dispose();
         if (uiSkin != null) uiSkin.dispose();
     }
 
