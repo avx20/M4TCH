@@ -1,5 +1,7 @@
 package io.github.avx20.M4TCH;
 
+
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
@@ -15,7 +17,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class PlayScreen implements Screen {
-    private BitmapFont entryFont;  // The medium font you want to use
+    private BitmapFont entryFont;  // The medium font 
     private FreeTypeFontGenerator fontGenerator;
     private final M4TCH game;
     private Texture gameBackground;
@@ -58,29 +60,29 @@ public class PlayScreen implements Screen {
     private int redComboCount = 0;
 
     public PlayScreen(M4TCH game) {
-    this.game = game;
-    this.viewport = new FitViewport(1920, 1080);
-    this.gameBackground = new Texture("game_bg.png");
-    
-    // Initialize the font generator
-    try {
-        fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("font.ttf"));
-        FreeTypeFontGenerator.FreeTypeFontParameter entryParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        entryParams.size = 36;  // Same size as in LeaderboardScreen
-        entryParams.color = Color.WHITE;  // Or whatever color you prefer
-        entryFont = fontGenerator.generateFont(entryParams);
-        entryFont.getData().setScale(1.2f);  // Same scale as in LeaderboardScreen
-    } catch (Exception e) {
-        Gdx.app.error("PlayScreen", "Error loading custom font, using default", e);
-        entryFont = new BitmapFont();
-        entryFont.getData().setScale(1.2f);
-        entryFont.setColor(Color.WHITE);
+        this.game = game;
+        this.viewport = new FitViewport(1920, 1080);
+        this.gameBackground = new Texture("game_bg.png");
+        
+        // Initialize the font generator
+        try {
+            fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("font.ttf"));
+            FreeTypeFontGenerator.FreeTypeFontParameter entryParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
+            entryParams.size = 36;
+            entryParams.color = Color.YELLOW;  // Changed from WHITE to YELLOW
+            entryFont = fontGenerator.generateFont(entryParams);
+            entryFont.getData().setScale(1.2f);
+        } catch (Exception e) {
+            Gdx.app.error("PlayScreen", "Error loading custom font, using default", e);
+            entryFont = new BitmapFont();
+            entryFont.getData().setScale(1.2f);
+            entryFont.setColor(Color.YELLOW);  // Changed from WHITE to YELLOW
+        }
+        
+        initializeGrid();
+        matchSuccessSound = Gdx.audio.newSound(Gdx.files.internal("match_success.mp3"));
+        matchFailSound = Gdx.audio.newSound(Gdx.files.internal("match_fail.mp3"));
     }
-    
-    initializeGrid();
-    matchSuccessSound = Gdx.audio.newSound(Gdx.files.internal("match_success.mp3"));
-    matchFailSound = Gdx.audio.newSound(Gdx.files.internal("match_fail.mp3"));
-}
 
     private void initializeGrid() {
         for (int row = 0; row < 4; row++) {
@@ -361,6 +363,8 @@ public class PlayScreen implements Screen {
             tile2.getPosition(), col2, row2);
         grid[row2][col2].setAppearTime(animationTimer);
 
+        
+
         firstSelectedTile = null;
         secondSelectedTile = null;
 
@@ -471,8 +475,11 @@ public class PlayScreen implements Screen {
         }
         firstSelectedTile = null;
         secondSelectedTile = null;
+        
+        // Ensure font color is yellow after resume
+        entryFont.setColor(Color.YELLOW);
     }
-
+    
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);

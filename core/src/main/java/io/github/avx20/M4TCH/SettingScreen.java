@@ -14,9 +14,8 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import com.badlogic.gdx.Preferences;
 
-public class SettingScreen implements Screen, M4TCH.VolumeChangeListener {
+public class SettingScreen implements Screen {
     private final M4TCH game;
     private SpriteBatch batch;
     private Viewport viewport;
@@ -56,8 +55,13 @@ public class SettingScreen implements Screen, M4TCH.VolumeChangeListener {
         // Initial volume from global setting
         this.volumeLevel = M4TCH.gameVolume;
 
-        // First try to load background with multiple paths
-        backgroundTexture = tryLoadTexture("game_bg.png");
+        // First try to load background - if it fails, we'll use generated textures
+        try {
+            this.backgroundTexture = new Texture(Gdx.files.internal("game_bg.png"));
+        } catch (Exception e) {
+            Gdx.app.log("SettingScreen", "Background texture loading failed, will use generated texture", e);
+            // Will generate later in createGeneratedTextures()
+        }
 
         // Create all textures
         createGeneratedTextures();
@@ -105,26 +109,6 @@ public class SettingScreen implements Screen, M4TCH.VolumeChangeListener {
         } catch (Exception e) {
             Gdx.app.log("SettingsScreen", "Background music loading failed", e);
         }
-
-        Gdx.app.log("SettingsScreen", "Settings screen initialized with volume: " + volumeLevel);
-    }
-
-    // Try loading texture from multiple possible locations
-    private Texture tryLoadTexture(String filename) {
-        try {
-            return new Texture(Gdx.files.internal(filename));
-        } catch (Exception e1) {
-            try {
-                return new Texture(Gdx.files.internal("assets/" + filename));
-            } catch (Exception e2) {
-                try {
-                    return new Texture(Gdx.files.internal("core/assets/" + filename));
-                } catch (Exception e3) {
-                    Gdx.app.log("SettingsScreen", "Could not load texture: " + filename);
-                    return null;
-                }
-            }
-        }
     }
 
     // Apply volume with proper handling for very low values
@@ -138,18 +122,8 @@ public class SettingScreen implements Screen, M4TCH.VolumeChangeListener {
             bgm.setVolume(volumeLevel);
         }
 
-        // Update global volume and save setting
+        // Update global volume
         M4TCH.gameVolume = volumeLevel;
-        saveVolumeSettings();
-
-        Gdx.app.log("SettingsScreen", "Volume set to: " + volumeLevel);
-    }
-
-    // Save volume setting to preferences
-    private void saveVolumeSettings() {
-        Preferences prefs = Gdx.app.getPreferences("M4TCHSettings");
-        prefs.putFloat("volume", volumeLevel);
-        prefs.flush();
     }
 
     private void createGeneratedTextures() {
@@ -290,11 +264,6 @@ public class SettingScreen implements Screen, M4TCH.VolumeChangeListener {
             float worldX = worldCoords.x;
             float worldY = worldCoords.y;
 
-            // Debug touch coordinates
-            if (Gdx.input.justTouched()) {
-                Gdx.app.debug("SettingsScreen", "Touch at: " + worldX + "," + worldY);
-            }
-
             // Handle volume knob dragging
             if (isDraggingKnob || volumeKnobBounds.contains(worldX, worldY)) {
                 isDraggingKnob = true;
@@ -343,7 +312,6 @@ public class SettingScreen implements Screen, M4TCH.VolumeChangeListener {
     private void safeReturn() {
         // Make sure to save volume setting
         M4TCH.gameVolume = volumeLevel;
-        saveVolumeSettings();
 
         // Stop the music safely
         if (bgm != null) {
@@ -360,7 +328,6 @@ public class SettingScreen implements Screen, M4TCH.VolumeChangeListener {
                 // Return to pause menu if coming from a paused game
                 PauseMenu pauseMenu = new PauseMenu(game, game.getPlayScreen());
                 game.setScreen(pauseMenu);
-                Gdx.app.log("SettingsScreen", "Returning to pause menu");
             } catch (Exception e) {
                 Gdx.app.error("SettingsScreen", "Error creating pause menu", e);
                 // Fallback to home screen if pause menu creation fails
@@ -371,21 +338,9 @@ public class SettingScreen implements Screen, M4TCH.VolumeChangeListener {
             // If not from paused game, return to home screen
             game.setPaused(false);
             game.setScreen(new HomeScreen(game));
-            Gdx.app.log("SettingsScreen", "Returning to home screen");
         }
 
         // Resources will be disposed by LibGDX when this screen is replaced
-    }
-
-    @Override
-    public void onVolumeChanged(float newVolume) {
-        this.volumeLevel = newVolume;
-        updateVolumeKnobPosition();
-
-        if (bgm != null) {
-            if (newVolume < 0.01f) newVolume = 0f;
-            bgm.setVolume(newVolume);
-        }
     }
 
     @Override
