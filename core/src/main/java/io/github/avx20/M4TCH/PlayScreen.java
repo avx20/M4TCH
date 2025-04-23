@@ -13,11 +13,12 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class PlayScreen implements Screen {
-    private BitmapFont entryFont;  // The medium font 
+    private BitmapFont entryFont;  // The medium font
     private FreeTypeFontGenerator fontGenerator;
     private final M4TCH game;
     private Texture gameBackground;
@@ -64,11 +65,14 @@ public class PlayScreen implements Screen {
     private final float NORMAL_TILE_SPEED_MULTIPLIER = 0.2f;
     private final float INSTANT_TILE_SPEED_MULTIPLIER = 2.0f; // 10x faster (0.2 * 10 = 2.0)
 
+    // 添加一个临时向量，用于屏幕到世界坐标的转换
+    private Vector3 touchPoint = new Vector3();
+
     public PlayScreen(M4TCH game) {
         this.game = game;
         this.viewport = new FitViewport(1920, 1080);
         this.gameBackground = new Texture("game_bg.png");
-        
+
         // Initialize the font generator
         try {
             fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("font.ttf"));
@@ -83,7 +87,7 @@ public class PlayScreen implements Screen {
             entryFont.getData().setScale(1.2f);
             entryFont.setColor(Color.YELLOW);  // Changed from WHITE to YELLOW
         }
-        
+
         initializeGrid();
         matchSuccessSound = Gdx.audio.newSound(Gdx.files.internal("match_success.mp3"));
         matchFailSound = Gdx.audio.newSound(Gdx.files.internal("match_fail.mp3"));
@@ -255,15 +259,32 @@ public class PlayScreen implements Screen {
 
     private void handleTileSelection() {
         if (Gdx.input.justTouched()) {
-            float touchX = Gdx.input.getX();
-            float touchY = viewport.getWorldHeight() - Gdx.input.getY();
+            // 使用 unproject 方法将屏幕坐标转换为世界坐标
+            touchPoint.set(Gdx.input.getX(), Gdx.input.getY(), 0);
+            viewport.unproject(touchPoint);
+
+            float touchX = touchPoint.x;
+            float touchY = touchPoint.y;
+
+            // 调试信息
+            Gdx.app.debug("PlayScreen", "Touch at screen: " + Gdx.input.getX() + "," + Gdx.input.getY() +
+                " world: " + touchX + "," + touchY);
 
             for (int row = 3; row >= 0; row--) {
                 for (int col = 0; col < 4; col++) {
                     Tile tile = grid[row][col];
                     if (tile != null && (tile.isFullyVisible() || instantTilesActive)) {
-                        Rectangle bounds = tile.getBounds();
+                        // 创建一个相对于世界坐标的碰撞检测区域
+                        float tileX = tile.getPosition().x;
+                        float tileY = tile.getPosition().y;
+                        Rectangle bounds = new Rectangle(tileX, tileY, TILE_SIZE, TILE_SIZE);
+
+                        // 调试瓦片位置
                         if (bounds.contains(touchX, touchY)) {
+                            Gdx.app.debug("PlayScreen", "Tile selected at grid: " + col + "," + row +
+                                " pos: " + tileX + "," + tileY +
+                                " bounds: " + bounds.x + "," + bounds.y + "," + bounds.width + "," + bounds.height);
+
                             tile.setScale(0.85f);
 
                             if (firstSelectedTile == null) {
@@ -306,8 +327,15 @@ public class PlayScreen implements Screen {
             }
         }
 
-        font.draw(batch, "Time: " + (int) pausedTimeRemaining, 50, viewport.getWorldHeight() - 50);
-        font.draw(batch, "Score: " + pausedScore, 50, viewport.getWorldHeight() - 100);
+        // 确保font不为null
+        if (font != null) {
+            font.draw(batch, "Time: " + (int) pausedTimeRemaining, 50, viewport.getWorldHeight() - 50);
+            font.draw(batch, "Score: " + pausedScore, 50, viewport.getWorldHeight() - 100);
+        } else {
+            // 如果font为null，使用entryFont代替
+            entryFont.draw(batch, "Time: " + (int) pausedTimeRemaining, 50, viewport.getWorldHeight() - 50);
+            entryFont.draw(batch, "Score: " + pausedScore, 50, viewport.getWorldHeight() - 100);
+        }
         batch.end();
     }
 
@@ -350,21 +378,21 @@ public class PlayScreen implements Screen {
             freezeTimeActive = true;
 
             if (instantTilesRemaining > 0) {
-                
+
                 freezeTimeRemaining += 5; // Extend duration
             } else {
                 freezeTimeRemaining = 5;
             }
-            
-            
 
-            
+
+
+
         } else if (color.equals("red")) {
             comboMultiplierActive = true;
-            
+
 
             if (comboMultiplierRemaining > 0) {
-                
+
                 comboMultiplierRemaining += 7; // Extend duration
             } else {
                 comboMultiplierRemaining = 7;
@@ -378,12 +406,12 @@ public class PlayScreen implements Screen {
                 comboMultiplier = (int) Math.pow(2, redComboCount);
             }
         } else if (color.equals("green")) {
-            
+
             instantTilesActive = true;
-            
-            
+
+
             if (instantTilesRemaining > 0) {
-                
+
                 instantTilesRemaining += 10; // Extend duration
             } else {
                 instantTilesRemaining = 10;
@@ -398,7 +426,7 @@ public class PlayScreen implements Screen {
         grid[row1][col1] = new Tile(1, color1, new Texture(color1 + "_tile_one.png"),
             tile1.getPosition(), col1, row1);
         grid[row1][col1].setAppearTime(animationTimer);
-        
+
         // Set appropriate speed based on whether instant tiles is active
         float speedMultiplier = instantTilesActive ? INSTANT_TILE_SPEED_MULTIPLIER : NORMAL_TILE_SPEED_MULTIPLIER;
         grid[row1][col1].setSpeedMultiplier(speedMultiplier);
@@ -421,20 +449,20 @@ public class PlayScreen implements Screen {
         int newNumber = originalNumber + 1;
         String color = tile1.getColor();
         Texture newTexture;
-    
+
         if (tile1.getNumber() == 2 && tile2.getNumber() == 2) {
             newNumber = 3;
             newTexture = new Texture(color + "_tile_star.png");
         } else {
             newTexture = new Texture(color + "_tile_" + newNumber + ".png");
         }
-    
+
         int secondRow = tile2.getGridY();
         int secondCol = tile2.getGridX();
         grid[secondRow][secondCol] = new Tile(newNumber, color, newTexture,
             tile2.getPosition(), secondCol, secondRow);
         grid[secondRow][secondCol].setAppearTime(animationTimer);
-    
+
         int firstRow = tile1.getGridY();
         int firstCol = tile1.getGridX();
         String newColor = getRandomColor();
@@ -442,18 +470,18 @@ public class PlayScreen implements Screen {
         grid[firstRow][firstCol] = new Tile(1, newColor, firstTexture,
             tile1.getPosition(), firstCol, firstRow);
         grid[firstRow][firstCol].setAppearTime(animationTimer);
-        
+
         // Set appropriate speed based on whether instant tiles is active
         float speedMultiplier = instantTilesActive ? INSTANT_TILE_SPEED_MULTIPLIER : NORMAL_TILE_SPEED_MULTIPLIER;
         grid[firstRow][firstCol].setSpeedMultiplier(speedMultiplier);
-    
+
         firstSelectedTile = null;
         secondSelectedTile = null;
-    
+
         // Calculate score based on the original number before combination
         int baseScore = calculateScore(originalNumber, color);
         score += baseScore * comboMultiplier;
-    
+
         // Reset combo timer if not a red match during all power-ups
         if (!(color.equals("red") && allPowerUpsActive())) {
             comboTimeRemaining = 0.5f;
@@ -463,17 +491,17 @@ public class PlayScreen implements Screen {
     private int calculateScore(int number, String color) {
         boolean allPowerUpsActive = allPowerUpsActive();
         boolean cmActive = comboMultiplierActive;
-    
+
         if (number == 1) { // Base tiles (number one tiles)
             if (allPowerUpsActive) return 290;
             if (cmActive) return 100;
             return 50;
-        } 
+        }
         else if (number == 2) { // Intermediate tiles (number two tiles)
             if (allPowerUpsActive) return 610;
             if (cmActive) return 300;
             return 150;
-        } 
+        }
         else if (number == 3) { // Star tiles
             // Special case for red star tiles when all power-ups are active
             if (color.equals("red") && allPowerUpsActive && redMatchDuringAllPowerUps) {
@@ -521,7 +549,7 @@ public class PlayScreen implements Screen {
         }
         firstSelectedTile = null;
         secondSelectedTile = null;
-        
+
         // Ensure font color is yellow after resume
         entryFont.setColor(Color.YELLOW);
     }

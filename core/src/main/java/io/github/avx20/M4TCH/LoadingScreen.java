@@ -10,7 +10,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
@@ -24,7 +23,8 @@ public class LoadingScreen implements Screen {
     private Texture backgroundTexture;
     private Texture loadingFrameTexture;
     private Texture loadingBarTexture;
-    private Texture instructionsImageTexture; // Image with game instructions
+    private Texture instructionsImage1Texture; // Left image (Loading1.png)
+    private Texture instructionsImage2Texture; // Right image (Loading2.png)
     private BitmapFont loadingFont;
     private BitmapFont titleFont; // Font for the title
     private Skin uiSkin;
@@ -70,12 +70,19 @@ public class LoadingScreen implements Screen {
                 Gdx.app.error("LoadingScreen", "Failed to load background texture");
             }
 
-            // Load the tutorial image
-            instructionsImageTexture = loadTextureWithFallbacks("loading.png", assetsPath);
-            if (instructionsImageTexture != null) {
-                Gdx.app.log("LoadingScreen", "Successfully loaded tutorial image");
+            // Load the tutorial images
+            instructionsImage1Texture = loadTextureWithFallbacks("Loading1.png", assetsPath);
+            if (instructionsImage1Texture != null) {
+                Gdx.app.log("LoadingScreen", "Successfully loaded Loading1.png");
             } else {
-                Gdx.app.error("LoadingScreen", "Failed to load tutorial image");
+                Gdx.app.error("LoadingScreen", "Failed to load Loading1.png");
+            }
+
+            instructionsImage2Texture = loadTextureWithFallbacks("Loading2.png", assetsPath);
+            if (instructionsImage2Texture != null) {
+                Gdx.app.log("LoadingScreen", "Successfully loaded Loading2.png");
+            } else {
+                Gdx.app.error("LoadingScreen", "Failed to load Loading2.png");
             }
 
             // Load loading bar textures
@@ -247,14 +254,14 @@ public class LoadingScreen implements Screen {
             batch.draw(backgroundTexture, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
         }
 
+        // Draw instructions images first (so they're behind other UI elements if needed)
+        drawInstructionsImages();
+
         // Draw loading frame and progress bar
         drawLoadingBar();
 
         // Draw loading stage text
         drawLoadingStage();
-
-        // Draw instructions image
-        drawInstructionsImage();
 
         batch.end();
 
@@ -269,7 +276,7 @@ public class LoadingScreen implements Screen {
         if (loadingBarTexture == null) return;
 
         float centerX = viewport.getWorldWidth() / 2f;
-        float centerY = viewport.getWorldHeight() / 2f - 200f; // Lower position for the loading bar
+        float centerY = viewport.getWorldHeight() * 0.15f; // 移到屏幕底部15%的位置
 
         // Larger loading bar size
         float barWidth = viewport.getWorldWidth() * 0.8f; // 80% of screen width
@@ -317,7 +324,7 @@ public class LoadingScreen implements Screen {
         if (loadingFont == null) return;
 
         float centerX = viewport.getWorldWidth() / 2f;
-        float centerY = viewport.getWorldHeight() / 2f - 150f; // Adjusted position below instructions
+        float centerY = viewport.getWorldHeight() * 0.15f + 70f; // 加载文本位于进度条上方
 
         // Draw current loading stage text
         String currentStageText = loadingStages[currentStage];
@@ -342,11 +349,9 @@ public class LoadingScreen implements Screen {
         );
     }
 
-    private void drawInstructionsImage() {
-        if (instructionsImageTexture == null) return;
-
+    private void drawInstructionsImages() {
         float centerX = viewport.getWorldWidth() / 2f;
-        float topY = viewport.getWorldHeight() * 0.8f; // Higher position for the title
+        float topY = viewport.getWorldHeight() * 0.95f; // 上移标题位置到屏幕95%高度处
 
         // Draw title with larger font
         if (titleFont != null) {
@@ -358,33 +363,59 @@ public class LoadingScreen implements Screen {
             );
         }
 
-        // Calculate image dimensions - maintain aspect ratio and fit in the available space
-        float maxWidth = viewport.getWorldWidth() * 0.7f;
-        float maxHeight = viewport.getWorldHeight() * 0.5f;
+        // 每个图片的宽度为屏幕宽度的40%
+        float maxImageWidth = viewport.getWorldWidth() * 0.4f;
+        // 设置图片高度为屏幕高度的65%（比原来的75%小，避免覆盖标题）
+        float maxImageHeight = viewport.getWorldHeight() * 0.65f;
+        // 两图片之间的间距为屏幕宽度的5%
+        float spacing = viewport.getWorldWidth() * 0.05f;
 
-        float originalWidth = instructionsImageTexture.getWidth();
-        float originalHeight = instructionsImageTexture.getHeight();
+        // 设置两个图片的统一尺寸
+        float imgWidth = maxImageWidth;
+        float imgHeight = maxImageHeight;
 
-        float aspectRatio = originalWidth / originalHeight;
+        // 计算图片的垂直位置 - 下移图片位置，预留足够空间给标题
+        // 确保标题和图片之间有足够间距
+        float titleBottomY = topY - glyphLayout.height - viewport.getWorldHeight() * 0.05f; // 标题底部Y坐标，增加5%的间距
+        float progressBarTopY = viewport.getWorldHeight() * 0.15f + 100f; // 进度条顶部Y坐标
 
-        float imgWidth, imgHeight;
+        // 计算图片顶部Y坐标，确保在标题下方
+        float imageTopY = titleBottomY;
+        // 计算图片底部Y坐标
+        float imageBottomY = imageTopY - imgHeight;
 
-        if (maxWidth / aspectRatio > maxHeight) {
-            // Height limited
-            imgHeight = maxHeight;
-            imgWidth = imgHeight * aspectRatio;
-        } else {
-            // Width limited
-            imgWidth = maxWidth;
-            imgHeight = imgWidth / aspectRatio;
+        // 确保图片底部不会遮挡进度条及其文本
+        if (imageBottomY < progressBarTopY + 30f) {
+            // 如果会遮挡，则调整图片高度
+            imgHeight = imageTopY - progressBarTopY - 30f;
+            // 保持宽高比
+            imgWidth = (imgHeight / maxImageHeight) * maxImageWidth;
         }
 
-        // Draw the image in the upper area
-        batch.draw(instructionsImageTexture,
-            centerX - imgWidth / 2f,
-            topY - 50f - imgHeight,
-            imgWidth, imgHeight
-        );
+        // 最终图片绘制的Y坐标（左下角）
+        float imageY = imageTopY - imgHeight;
+
+        // 左图 (Loading1.png)
+        if (instructionsImage1Texture != null) {
+            float leftImageX = centerX - spacing/2 - imgWidth;
+
+            batch.draw(instructionsImage1Texture,
+                leftImageX,
+                imageY,
+                imgWidth, imgHeight
+            );
+        }
+
+        // 右图 (Loading2.png)
+        if (instructionsImage2Texture != null) {
+            float rightImageX = centerX + spacing/2;
+
+            batch.draw(instructionsImage2Texture,
+                rightImageX,
+                imageY,
+                imgWidth, imgHeight
+            );
+        }
     }
 
     @Override
@@ -400,7 +431,8 @@ public class LoadingScreen implements Screen {
         if (backgroundTexture != null) backgroundTexture.dispose();
         if (loadingFrameTexture != null) loadingFrameTexture.dispose();
         if (loadingBarTexture != null) loadingBarTexture.dispose();
-        if (instructionsImageTexture != null) instructionsImageTexture.dispose();
+        if (instructionsImage1Texture != null) instructionsImage1Texture.dispose();
+        if (instructionsImage2Texture != null) instructionsImage2Texture.dispose();
         if (loadingFont != null) loadingFont.dispose();
         if (titleFont != null) titleFont.dispose();
         if (uiSkin != null) uiSkin.dispose();
