@@ -1,6 +1,7 @@
 package io.github.avx20.M4TCH;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
@@ -27,6 +28,7 @@ public class LoadingScreen implements Screen {
     private Texture instructionsImage2Texture; // Right image (Loading2.png)
     private BitmapFont loadingFont;
     private BitmapFont titleFont; // Font for the title
+    private BitmapFont skipFont; // Font for the skip message
     private Skin uiSkin;
     private GlyphLayout glyphLayout;
 
@@ -46,6 +48,12 @@ public class LoadingScreen implements Screen {
         "即将开始！"
     };
     private int currentStage = 0;
+
+    // Skip message variables
+    private String skipMessage = "按空格键跳过 (Press SPACE to skip)";
+    private float skipMessageAlpha = 0f;
+    private boolean fadeIn = true;
+    private float fadeSpeed = 1.5f; // Controls how fast the skip message fades in/out
 
     public LoadingScreen(M4TCH game, Screen nextScreen) {
         this.game = game;
@@ -126,6 +134,11 @@ public class LoadingScreen implements Screen {
                 parameter.color.set(1f, 0.9f, 0f, 1f); // Yellow color
                 titleFont = generator.generateFont(parameter);
 
+                // Configure font for skip message - YELLOW (slightly smaller)
+                parameter.size = 32;
+                parameter.color.set(1f, 0.9f, 0f, 1f); // Yellow color
+                skipFont = generator.generateFont(parameter);
+
                 generator.dispose(); // Clean up the generator
             } catch (Exception e) {
                 Gdx.app.error("LoadingScreen", "Error loading custom font: " + e.getMessage(), e);
@@ -133,9 +146,14 @@ public class LoadingScreen implements Screen {
                 loadingFont = new BitmapFont();
                 loadingFont.getData().setScale(2f);
                 loadingFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
+
                 titleFont = new BitmapFont();
                 titleFont.getData().setScale(3f);
                 titleFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
+
+                skipFont = new BitmapFont();
+                skipFont.getData().setScale(1.8f);
+                skipFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
             }
 
             // Load UI Skin with flexible paths (fallback)
@@ -151,9 +169,14 @@ public class LoadingScreen implements Screen {
             loadingFont = new BitmapFont();
             loadingFont.getData().setScale(2f);
             loadingFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
+
             titleFont = new BitmapFont();
             titleFont.getData().setScale(3f);
             titleFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
+
+            skipFont = new BitmapFont();
+            skipFont.getData().setScale(1.8f);
+            skipFont.setColor(1f, 0.9f, 0f, 1f); // Yellow color
         }
     }
 
@@ -230,6 +253,17 @@ public class LoadingScreen implements Screen {
 
     @Override
     public void render(float delta) {
+        // Check for space bar input to skip
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            // Skip directly to play screen
+            game.setScreen(nextScreen);
+            dispose(); // Clean up resources
+            return;
+        }
+
+        // Update skip message fade effect
+        updateSkipMessageFade(delta);
+
         // Clear the screen with a transparent background
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -263,6 +297,9 @@ public class LoadingScreen implements Screen {
         // Draw loading stage text
         drawLoadingStage();
 
+        // Draw skip message with fade effect
+        drawSkipMessage();
+
         batch.end();
 
         // Switch to next screen when loading is complete
@@ -270,6 +307,44 @@ public class LoadingScreen implements Screen {
             game.setScreen(nextScreen);
             dispose(); // Clean up resources
         }
+    }
+
+    private void updateSkipMessageFade(float delta) {
+        // Update alpha value for fading effect
+        if (fadeIn) {
+            skipMessageAlpha += delta * fadeSpeed;
+            if (skipMessageAlpha >= 1.0f) {
+                skipMessageAlpha = 1.0f;
+                fadeIn = false;
+            }
+        } else {
+            skipMessageAlpha -= delta * fadeSpeed;
+            if (skipMessageAlpha <= 0.3f) { // Minimum alpha of 0.3 so text always remains somewhat visible
+                skipMessageAlpha = 0.3f;
+                fadeIn = true;
+            }
+        }
+    }
+
+    private void drawSkipMessage() {
+        if (skipFont == null) return;
+
+        float centerX = viewport.getWorldWidth() / 2f;
+        // Position skip message at the bottom of the screen, above the loading bar
+        float skipY = viewport.getWorldHeight() * 0.08f;
+
+        // Draw skip message with current alpha value
+        skipFont.setColor(1f, 0.9f, 0f, skipMessageAlpha); // Set alpha for fading effect
+
+        glyphLayout.setText(skipFont, skipMessage);
+        skipFont.draw(batch,
+            skipMessage,
+            centerX - glyphLayout.width / 2f,
+            skipY
+        );
+
+        // Reset font color
+        skipFont.setColor(1f, 0.9f, 0f, 1f);
     }
 
     private void drawLoadingBar() {
@@ -435,6 +510,7 @@ public class LoadingScreen implements Screen {
         if (instructionsImage2Texture != null) instructionsImage2Texture.dispose();
         if (loadingFont != null) loadingFont.dispose();
         if (titleFont != null) titleFont.dispose();
+        if (skipFont != null) skipFont.dispose();
         if (uiSkin != null) uiSkin.dispose();
     }
 
