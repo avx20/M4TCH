@@ -15,10 +15,11 @@ public class PauseMenu implements Screen, M4TCH.VolumeChangeListener {
     private boolean isPaused = true;
     private BitmapFont font;
     private SpriteBatch batch;
-    private Texture background, resume_button, restart_button, settings_icon, exit_button;
+    private Texture background, resume_button, restart_button, settings_icon, mainmenu_button;
     private Rectangle resumeBounds, restartBounds, settingsBounds, mainMenuBounds;
     private M4TCH game;
     private PlayScreen playScreen;
+    private PlayScreen associatedPlayScreen;
 
     private static final int BUTTON_SPACING = 40;
     private static final float SCALE_DOWN = 0.9f;
@@ -42,12 +43,12 @@ public class PauseMenu implements Screen, M4TCH.VolumeChangeListener {
     private static final float SETTINGS_BUTTON_WIDTH = 150f;
     private static final float SETTINGS_BUTTON_HEIGHT = 80f;
 
-    private static final float EXIT_BUTTON_WIDTH = 200f;
-    private static final float EXIT_BUTTON_HEIGHT = 80f;
+    private static final float mainmenu_button_WIDTH = 220f;
+    private static final float mainmenu_button_HEIGHT = 160f;
 
     public PauseMenu(M4TCH game, PlayScreen playScreen) {
         this.game = game;
-        this.playScreen = playScreen;
+        this.associatedPlayScreen = playScreen;
         font = new BitmapFont();
         batch = new SpriteBatch();
 
@@ -55,12 +56,12 @@ public class PauseMenu implements Screen, M4TCH.VolumeChangeListener {
         resume_button = tryLoadTexture("resume_button.png");
         restart_button = tryLoadTexture("restart_button.png");
         settings_icon = tryLoadTexture("settings_icon.png");
-        exit_button = tryLoadTexture("exit_button.png");
+        mainmenu_button = tryLoadTexture("mainmenu_button.png");
 
         int centerX = Gdx.graphics.getWidth() / 2;
         int centerY = Gdx.graphics.getHeight() / 2;
 
-        float topY = centerY + (RESUME_BUTTON_HEIGHT + RESTART_BUTTON_HEIGHT + SETTINGS_BUTTON_HEIGHT + EXIT_BUTTON_HEIGHT) / 2f
+        float topY = centerY + (RESUME_BUTTON_HEIGHT + RESTART_BUTTON_HEIGHT + SETTINGS_BUTTON_HEIGHT + mainmenu_button_HEIGHT) / 2f
             + BUTTON_SPACING * 1.5f;
 
         resumeBounds = new Rectangle(centerX - RESUME_BUTTON_WIDTH / 2f, topY - RESUME_BUTTON_HEIGHT, RESUME_BUTTON_WIDTH, RESUME_BUTTON_HEIGHT);
@@ -70,15 +71,15 @@ public class PauseMenu implements Screen, M4TCH.VolumeChangeListener {
         settingsBounds = new Rectangle(centerX - SETTINGS_BUTTON_WIDTH / 2f,
             restartBounds.y - SETTINGS_BUTTON_HEIGHT - BUTTON_SPACING,
             SETTINGS_BUTTON_WIDTH, SETTINGS_BUTTON_HEIGHT);
-        mainMenuBounds = new Rectangle(centerX - EXIT_BUTTON_WIDTH / 2f,
-            settingsBounds.y - EXIT_BUTTON_HEIGHT - BUTTON_SPACING,
-            EXIT_BUTTON_WIDTH, EXIT_BUTTON_HEIGHT);
+        mainMenuBounds = new Rectangle(centerX - mainmenu_button_WIDTH / 2f,
+            settingsBounds.y - mainmenu_button_HEIGHT - BUTTON_SPACING,
+            mainmenu_button_WIDTH, mainmenu_button_HEIGHT);
 
         // Set click area sizes, ensure synchronization
         resumeBounds.setSize(RESUME_BUTTON_WIDTH, RESUME_BUTTON_HEIGHT);
         restartBounds.setSize(RESTART_BUTTON_WIDTH, RESTART_BUTTON_HEIGHT);
         settingsBounds.setSize(SETTINGS_BUTTON_WIDTH, SETTINGS_BUTTON_HEIGHT);
-        mainMenuBounds.setSize(EXIT_BUTTON_WIDTH, EXIT_BUTTON_HEIGHT);
+        mainMenuBounds.setSize(mainmenu_button_WIDTH, mainmenu_button_HEIGHT);
 
         try {
             bgm = Gdx.audio.newMusic(Gdx.files.internal("bgmmusic.mp3"));
@@ -122,7 +123,8 @@ public class PauseMenu implements Screen, M4TCH.VolumeChangeListener {
             clickTimer += delta;
             if (clickTimer >= CLICK_ANIMATION_DURATION) {
                 switch (clickedButton) {
-                    case RESUME: game.resumeGame(); break;
+                    case RESUME: 
+                    game.resumeGame(); break;
                     case RESTART: game.startGame(); break;
                     case SETTINGS: game.setScreen(new SettingScreen(game)); break;
                     case EXIT:
@@ -224,7 +226,7 @@ public class PauseMenu implements Screen, M4TCH.VolumeChangeListener {
             settingsBounds.width * settingsScale,
             settingsBounds.height * settingsScale);
 
-        batch.draw(exit_button,
+        batch.draw(mainmenu_button,
             mainMenuBounds.x + (mainMenuBounds.width * (1 - exitScale) / 2),
             mainMenuBounds.y + (mainMenuBounds.height * (1 - exitScale) / 2),
             mainMenuBounds.width * exitScale,
@@ -242,13 +244,13 @@ public class PauseMenu implements Screen, M4TCH.VolumeChangeListener {
             if (resume_button != null) resume_button.dispose();
             if (restart_button != null) restart_button.dispose();
             if (settings_icon != null) settings_icon.dispose();
-            if (exit_button != null) exit_button.dispose();
+            if (mainmenu_button != null) mainmenu_button.dispose();
             if (bgm != null) bgm.dispose();
         } catch (Exception e) {
             Gdx.app.error("PauseMenu", "Error disposing resources", e);
         }
     }
-
+    
     @Override public void show() {}
     @Override public void resize(int width, int height) {}
     @Override public void pause() {}
