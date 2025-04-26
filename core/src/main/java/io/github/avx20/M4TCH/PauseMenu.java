@@ -19,7 +19,7 @@ public class PauseMenu implements Screen, M4TCH.VolumeChangeListener {
     private Rectangle resumeBounds, restartBounds, settingsBounds, mainMenuBounds;
     private M4TCH game;
     private PlayScreen playScreen;
-    private PlayScreen associatedPlayScreen;
+
 
     private static final int BUTTON_SPACING = 40;
     private static final float SCALE_DOWN = 0.9f;
@@ -48,7 +48,7 @@ public class PauseMenu implements Screen, M4TCH.VolumeChangeListener {
 
     public PauseMenu(M4TCH game, PlayScreen playScreen) {
         this.game = game;
-        this.associatedPlayScreen = playScreen;
+        this.playScreen = playScreen;
         font = new BitmapFont();
         batch = new SpriteBatch();
 
