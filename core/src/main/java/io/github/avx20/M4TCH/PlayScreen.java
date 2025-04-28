@@ -30,7 +30,7 @@ public class PlayScreen implements Screen {
     private Sound matchFailSound;
 
     private Tile[][] grid = new Tile[4][4];
-    private final float TILE_SIZE = 200;
+    private final float TILE_SIZE = 220;
     private final float TILE_SPACING = 5;
 
     private Tile firstSelectedTile = null;
